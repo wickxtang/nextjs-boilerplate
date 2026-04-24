@@ -103,11 +103,7 @@ export default function LibraryPage() {
       if (!chartRef.current) return;
       if (chartInstance.current) chartInstance.current.dispose();
 
-      // const chart = echarts.init(chartRef.current);
-      const chart = echarts.init(chartRef.current, null, {
-        width: 720,
-        height: 400,
-      });
+      const chart = echarts.init(chartRef.current);
       chartInstance.current = chart;
 
       const riskNodeColors: Record<string, string> = {
