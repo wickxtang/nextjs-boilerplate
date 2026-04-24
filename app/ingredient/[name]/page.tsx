@@ -64,7 +64,7 @@ export default function IngredientPage() {
   }
 
   return (
-    <main style={{ maxWidth: '520px', margin: '0 auto', padding: '1.5rem 1rem', fontFamily: 'system-ui, sans-serif' }}>
+    <main style={{ maxWidth: '760px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
       <button
         onClick={() => router.back()}
         style={{

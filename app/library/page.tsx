@@ -103,7 +103,11 @@ export default function LibraryPage() {
       if (!chartRef.current) return;
       if (chartInstance.current) chartInstance.current.dispose();
 
-      const chart = echarts.init(chartRef.current);
+      // const chart = echarts.init(chartRef.current);
+      const chart = echarts.init(chartRef.current, null, {
+        width: 720,
+        height: 400,
+      });
       chartInstance.current = chart;
 
       const riskNodeColors: Record<string, string> = {
@@ -137,9 +141,9 @@ export default function LibraryPage() {
           })),
           links,
           force: {
-            repulsion: 220,
-            edgeLength: [80, 160],
-            gravity: 0.08,
+            repulsion: 600,
+            edgeLength: [150, 300],
+            gravity: 0.04,
           },
           lineStyle: { color: '#ccc', width: 1.5, curveness: 0.1 },
           emphasis: {
@@ -276,7 +280,7 @@ export default function LibraryPage() {
       );
     }
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
         {snacks.map(snack => {
           const riskColor = RISK_COLORS[snack.riskLevel] || RISK_COLORS.blue;
           const isOwner = snack.userId === currentUserId;
@@ -285,6 +289,7 @@ export default function LibraryPage() {
           if (isEditing) {
             return (
               <div key={snack.id} style={{
+                gridColumn: '1 / -1',
                 background: '#fff', borderRadius: '10px', padding: '1rem 1.25rem',
                 border: `2px solid ${COLORS.green}`, display: 'flex', flexDirection: 'column', gap: '0.75rem',
               }}>
@@ -419,7 +424,7 @@ export default function LibraryPage() {
   };
 
   return (
-    <main style={{ maxWidth: '520px', margin: '0 auto', padding: '1.5rem 1rem', fontFamily: 'system-ui, sans-serif' }}>
+    <main style={{ maxWidth: '720px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1 style={{ margin: 0, fontSize: '1.3rem', color: COLORS.greenDark }}>食物库</h1>
         <button
@@ -441,7 +446,7 @@ export default function LibraryPage() {
 
       {tab === 'graph' ? (
         <div>
-          <div ref={chartRef} style={{ width: '100%', height: '450px', background: '#fff', borderRadius: '10px', border: `1px solid ${COLORS.greenLight}` }} />
+          <div ref={chartRef} style={{ width: '100%', height: 'calc(100vh - 200px)', minHeight: '500px', background: '#fff', borderRadius: '10px', border: `1px solid ${COLORS.greenLight}` }} />
           <p style={{ fontSize: '0.78rem', color: COLORS.textLight, textAlign: 'center', marginTop: '0.5rem' }}>
             点击配料节点查看详情 · 拖拽移动节点 · 滚轮缩放
           </p>

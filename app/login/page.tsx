@@ -58,7 +58,7 @@ export default function LoginPage() {
     <main style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: COLORS.bg }}>
       <form onSubmit={handleSubmit} style={{
         width: '100%',
-        maxWidth: '380px',
+        maxWidth: '420px',
         background: '#fff',
         borderRadius: '12px',
         padding: '2rem',

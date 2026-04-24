@@ -174,7 +174,7 @@ const FormUI = () => {
   }
 
   return (
-    <div style={{ maxWidth: '480px', margin: '2rem auto', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ width: '100%', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -182,7 +182,7 @@ const FormUI = () => {
         marginBottom: '1rem',
         padding: '0.5rem 0',
       }}>
-        <span style={{ fontSize: '0.9rem', color: COLORS.text }}>
+        <span style={{ fontSize: '1.1rem', color: COLORS.text, fontWeight: 600 }}>
           {username}
         </span>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -193,9 +193,8 @@ const FormUI = () => {
               background: 'none',
               border: `1px solid ${COLORS.greenLight}`,
               borderRadius: '6px',
-              padding: '0.3rem 0.75rem',
-              fontSize: '0.8rem',
-              color: COLORS.greenDark,
+              padding: '0.4rem 1rem',
+              fontSize: '0.95rem',
               cursor: 'pointer',
               fontWeight: 600,
             }}
@@ -209,8 +208,8 @@ const FormUI = () => {
               background: 'none',
               border: `1px solid ${COLORS.greenLight}`,
               borderRadius: '6px',
-              padding: '0.3rem 0.75rem',
-              fontSize: '0.8rem',
+              padding: '0.4rem 1rem',
+              fontSize: '0.95rem',
               color: COLORS.textLight,
               cursor: 'pointer',
             }}
@@ -219,6 +218,7 @@ const FormUI = () => {
           </button>
         </div>
       </div>
+      <div style={{ maxWidth: '720px', margin: '0 auto' }}>
       <form
         onSubmit={handleImageSubmit}
         style={{
@@ -231,8 +231,8 @@ const FormUI = () => {
           gap: '1.25rem',
         }}
       >
-        <h1 style={{ margin: 0, fontSize: '1.5rem', color: COLORS.greenDark, textAlign: 'center' }}>
-          食品成分解析
+        <h1 style={{ margin: 0, fontSize: '1.8rem', color: COLORS.greenDark, textAlign: 'center' }}>
+          AI 健康食品成分助手
         </h1>
 
         {imageUrl && (
@@ -464,6 +464,7 @@ const FormUI = () => {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };
