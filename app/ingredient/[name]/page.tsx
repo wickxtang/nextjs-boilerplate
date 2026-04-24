@@ -55,16 +55,18 @@ export default function IngredientPage() {
     });
   }, [name, router]);
 
+  const mainStyle: React.CSSProperties = { width: '100%', maxWidth: '720px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif' };
+
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '4rem', color: COLORS.textLight }}>加载中...</div>;
+    return <main style={mainStyle}><p style={{ textAlign: 'center', padding: '4rem', color: COLORS.textLight }}>加载中...</p></main>;
   }
 
   if (!data) {
-    return <div style={{ textAlign: 'center', padding: '4rem', color: COLORS.textLight }}>未找到数据</div>;
+    return <main style={mainStyle}><p style={{ textAlign: 'center', padding: '4rem', color: COLORS.textLight }}>未找到数据</p></main>;
   }
 
   return (
-    <main style={{ maxWidth: '760px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
+    <main style={mainStyle}>
       <button
         onClick={() => router.back()}
         style={{

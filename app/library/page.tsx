@@ -424,7 +424,7 @@ export default function LibraryPage() {
   };
 
   return (
-    <main style={{ maxWidth: '720px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
+    <main style={{ width: '100%', maxWidth: '720px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1 style={{ margin: 0, fontSize: '1.3rem', color: COLORS.greenDark }}>食物库</h1>
         <button
