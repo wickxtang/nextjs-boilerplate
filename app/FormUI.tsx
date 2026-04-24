@@ -12,13 +12,26 @@ const COLORS = {
   textLight: '#6b7a55',
 };
 
+interface OcrResult {
+  name: string;
+  ingredients: string[];
+  riskLevel: string;
+  riskLabel: string;
+  interpretation: string;
+}
+
 const FormUI = () => {
   const [imageUrl, setImageUrl] = useState('');
-  const [ocrResult, setOcrResult] = useState(null);
+  const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
 
-  const handleImageSubmit = async (e) => {
+  const [editName, setEditName] = useState('');
+  const [editIngredients, setEditIngredients] = useState<string[]>([]);
+  const [newIngredient, setNewIngredient] = useState('');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  const handleImageSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
+    const formData = new FormData(e.currentTarget);
     try {
       const response = await fetch('/api/process-records', {
         method: 'POST',
@@ -26,9 +39,70 @@ const FormUI = () => {
       });
       const data = await response.json();
       setOcrResult(data);
+      setEditName(data.name || '');
+      setEditIngredients(data.ingredients || []);
+      setSaveStatus('idle');
     } catch (error) {
       console.error('OCR failed:', error);
     }
+  };
+
+  const addIngredient = () => {
+    const trimmed = newIngredient.trim();
+    if (trimmed && !editIngredients.includes(trimmed)) {
+      setEditIngredients([...editIngredients, trimmed]);
+      setNewIngredient('');
+    }
+  };
+
+  const removeIngredient = (index: number) => {
+    setEditIngredients(editIngredients.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    if (!editName.trim() || editIngredients.length === 0) return;
+    setSaveStatus('saving');
+    try {
+      const res = await fetch('/api/save-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editName.trim(),
+          ingredients: editIngredients,
+          riskLevel: ocrResult?.riskLevel || '',
+          riskLabel: ocrResult?.riskLabel || '',
+          interpretation: ocrResult?.interpretation || '',
+        }),
+      });
+      if (res.ok) {
+        setSaveStatus('saved');
+      } else {
+        setSaveStatus('error');
+      }
+    } catch {
+      setSaveStatus('error');
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    padding: '0.5rem 0.75rem',
+    borderRadius: '6px',
+    border: `1px solid ${COLORS.greenLight}`,
+    fontSize: '0.9rem',
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box',
+  };
+
+  const smallBtnStyle: React.CSSProperties = {
+    padding: '0.4rem 0.75rem',
+    background: COLORS.green,
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '0.85rem',
+    cursor: 'pointer',
+    flexShrink: 0,
   };
 
   return (
@@ -49,7 +123,6 @@ const FormUI = () => {
           食品成分解析
         </h1>
 
-        {/* 预览 */}
         {imageUrl && (
           <div style={{
             borderRadius: '8px',
@@ -170,6 +243,103 @@ const FormUI = () => {
           </div>
         )}
       </form>
+
+      {ocrResult && (
+        <div style={{
+          marginTop: '1.25rem',
+          background: '#fff',
+          borderRadius: '12px',
+          padding: '1.5rem',
+          border: `2px solid ${COLORS.greenLight}`,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+        }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: COLORS.greenDark }}>
+            编辑并保存
+          </h3>
+
+          <div>
+            <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>食品名称</label>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              style={{ ...inputStyle, marginTop: '0.35rem' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>配料列表</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.35rem' }}>
+              {editIngredients.map((ing, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{
+                    flex: 1,
+                    padding: '0.4rem 0.75rem',
+                    background: COLORS.bg,
+                    borderRadius: '6px',
+                    border: `1px solid ${COLORS.greenLight}`,
+                    fontSize: '0.9rem',
+                    color: COLORS.text,
+                  }}>
+                    {ing}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeIngredient(idx)}
+                    style={{
+                      ...smallBtnStyle,
+                      background: '#e74c3c',
+                      padding: '0.3rem 0.6rem',
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    删除
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <input
+                type="text"
+                value={newIngredient}
+                onChange={(e) => setNewIngredient(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addIngredient(); } }}
+                placeholder="输入配料名称"
+                style={inputStyle}
+              />
+              <button type="button" onClick={addIngredient} style={smallBtnStyle}>
+                添加
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saveStatus === 'saving' || !editName.trim() || editIngredients.length === 0}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: saveStatus === 'saved' ? COLORS.greenDark : COLORS.green,
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              fontWeight: 600,
+              cursor: saveStatus === 'saving' ? 'not-allowed' : 'pointer',
+              opacity: (!editName.trim() || editIngredients.length === 0) ? 0.5 : 1,
+            }}
+          >
+            {saveStatus === 'saving' ? '保存中...' : saveStatus === 'saved' ? '已保存' : '保存到数据库'}
+          </button>
+
+          {saveStatus === 'error' && (
+            <p style={{ color: '#e74c3c', fontSize: '0.85rem', margin: 0 }}>保存失败，请重试</p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
