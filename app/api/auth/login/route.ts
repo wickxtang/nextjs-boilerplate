@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import db from '@/app/lib/db';
+import { queryOne } from '@/app/lib/db';
 import { signToken, COOKIE_NAME } from '@/app/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -10,9 +10,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '用户名和密码不能为空' }, { status: 400 });
   }
 
-  const user = db.prepare('SELECT id, username, password_hash FROM users WHERE username = ?').get(username) as
-    | { id: number; username: string; password_hash: string }
-    | undefined;
+  const user = await queryOne<{ id: number; username: string; password_hash: string }>(
+    'SELECT id, username, password_hash FROM users WHERE username = ?', [username]
+  );
 
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return NextResponse.json({ error: '用户名或密码错误' }, { status: 401 });

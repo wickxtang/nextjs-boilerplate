@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/app/lib/db';
+import { execute, batch } from '@/app/lib/db';
 import { getCurrentUser } from '@/app/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -15,25 +15,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '缺少必填字段' }, { status: 400 });
   }
 
-  const insertSnack = db.prepare(
-    `INSERT INTO snacks (user_id, name, risk_level, risk_label, interpretation, image_data, record_time) VALUES (?, ?, ?, ?, ?, ?, date('now'))`
+  const snackResult = await execute(
+    `INSERT INTO snacks (user_id, name, risk_level, risk_label, interpretation, image_data, record_time) VALUES (?, ?, ?, ?, ?, ?, date('now'))`,
+    [user.userId, name, riskLevel || null, riskLabel || null, interpretation || null, imageData || null]
   );
-  const insertIngredient = db.prepare(
-    `INSERT INTO snack_ingredients (snack_id, ingredient_name) VALUES (?, ?)`
-  );
+  const snackId = Number(snackResult.lastInsertRowid);
 
-  const saveRecord = db.transaction(() => {
-    const result = insertSnack.run(user.userId, name, riskLevel || null, riskLabel || null, interpretation || null, imageData || null);
-    const snackId = result.lastInsertRowid;
-    for (const ing of ingredients) {
-      if (ing.trim()) {
-        insertIngredient.run(snackId, ing.trim());
-      }
-    }
-    return snackId;
-  });
+  const ingredientStmts = ingredients
+    .filter((ing: string) => ing.trim())
+    .map((ing: string) => ({
+      sql: 'INSERT INTO snack_ingredients (snack_id, ingredient_name) VALUES (?, ?)',
+      args: [snackId, ing.trim()],
+    }));
 
-  const snackId = saveRecord();
+  if (ingredientStmts.length > 0) {
+    await batch(ingredientStmts);
+  }
 
-  return NextResponse.json({ success: true, id: Number(snackId) });
+  return NextResponse.json({ success: true, id: snackId });
 }

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import * as echarts from 'echarts';
+import type { ECharts } from 'echarts';
 
 const COLORS = {
   green: '#7ecf5f',
@@ -70,7 +70,7 @@ export default function LibraryPage() {
   const [editState, setEditState] = useState<EditState>({ name: '', riskLevel: 'blue', ingredients: [], newIngredient: '', imageData: null, imageChanged: false });
   const [saving, setSaving] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstance = useRef<echarts.ECharts | null>(null);
+  const chartInstance = useRef<ECharts | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me').then(res => {
@@ -103,6 +103,7 @@ export default function LibraryPage() {
       if (!chartRef.current) return;
       if (chartInstance.current) chartInstance.current.dispose();
 
+      const echarts = await import('echarts');
       const chart = echarts.init(chartRef.current);
       chartInstance.current = chart;
 

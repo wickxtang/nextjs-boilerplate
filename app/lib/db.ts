@@ -1,48 +1,70 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import { createClient, type Client, type InValue } from '@libsql/client';
 
-const dbPath = path.join(process.cwd(), 'data', 'app.db');
-const db = new Database(dbPath);
+let _db: Client | null = null;
+let _initialized: Promise<void> | null = null;
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS snacks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    name TEXT NOT NULL,
-    risk_level TEXT,
-    risk_label TEXT,
-    interpretation TEXT,
-    image_data TEXT,
-    record_time TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  );
-
-  CREATE TABLE IF NOT EXISTS snack_ingredients (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    snack_id INTEGER NOT NULL,
-    ingredient_name TEXT NOT NULL,
-    FOREIGN KEY (snack_id) REFERENCES snacks(id) ON DELETE CASCADE
-  );
-`);
-
-// 兼容旧表：如果 snacks 表缺少 user_id 列则补上
-const columns = db.prepare("PRAGMA table_info(snacks)").all() as { name: string }[];
-if (!columns.some(c => c.name === 'user_id')) {
-  db.exec(`ALTER TABLE snacks ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE`);
-}
-if (!columns.some(c => c.name === 'image_data')) {
-  db.exec(`ALTER TABLE snacks ADD COLUMN image_data TEXT`);
+function getDb(): Client {
+  if (!_db) {
+    _db = createClient({
+      url: process.env.TURSO_DATABASE_URL!,
+      authToken: process.env.TURSO_AUTH_TOKEN,
+    });
+  }
+  return _db;
 }
 
-export default db;
+function ensureInit(): Promise<void> {
+  if (!_initialized) {
+    _initialized = getDb().executeMultiple(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS snacks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        name TEXT NOT NULL,
+        risk_level TEXT,
+        risk_label TEXT,
+        interpretation TEXT,
+        image_data TEXT,
+        record_time TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS snack_ingredients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        snack_id INTEGER NOT NULL,
+        ingredient_name TEXT NOT NULL,
+        FOREIGN KEY (snack_id) REFERENCES snacks(id) ON DELETE CASCADE
+      );
+    `);
+  }
+  return _initialized;
+}
+
+export async function queryOne<T>(sql: string, args: InValue[] = []): Promise<T | undefined> {
+  await ensureInit();
+  const result = await getDb().execute({ sql, args });
+  return result.rows[0] as unknown as T | undefined;
+}
+
+export async function queryAll<T>(sql: string, args: InValue[] = []): Promise<T[]> {
+  await ensureInit();
+  const result = await getDb().execute({ sql, args });
+  return result.rows as unknown as T[];
+}
+
+export async function execute(sql: string, args: InValue[] = []) {
+  await ensureInit();
+  return getDb().execute({ sql, args });
+}
+
+export async function batch(stmts: Array<{ sql: string; args: InValue[] }>) {
+  await ensureInit();
+  return getDb().batch(stmts, 'write');
+}

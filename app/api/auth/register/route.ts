@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import db from '@/app/lib/db';
+import { queryOne, execute } from '@/app/lib/db';
 import { signToken, COOKIE_NAME } from '@/app/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -13,14 +13,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '用户名至少2位，密码至少6位' }, { status: 400 });
   }
 
-  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  const existing = await queryOne<{ id: number }>('SELECT id FROM users WHERE username = ?', [username]);
   if (existing) {
     return NextResponse.json({ error: '用户名已存在' }, { status: 409 });
   }
 
   const hash = bcrypt.hashSync(password, 10);
-  const result = db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(username, hash);
-  const userId = result.lastInsertRowid as number;
+  const result = await execute('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, hash]);
+  const userId = Number(result.lastInsertRowid);
 
   const token = signToken({ userId, username });
   const res = NextResponse.json({ success: true, userId, username });

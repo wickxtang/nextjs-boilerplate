@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/app/lib/db';
+import { queryAll } from '@/app/lib/db';
 import { getCurrentUser } from '@/app/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     : `SELECT s.*, u.username FROM snacks s JOIN users u ON s.user_id = u.id ORDER BY s.created_at DESC`;
 
   const params = scope === 'mine' ? [user.userId] : [];
-  const snacks = db.prepare(query).all(...params) as Array<{
+  const snacks = await queryAll<{
     id: number;
     user_id: number;
     name: string;
@@ -26,16 +26,17 @@ export async function GET(request: NextRequest) {
     record_time: string;
     created_at: string;
     username: string;
-  }>;
+  }>(query, params);
 
   const snackIds = snacks.map(s => s.id);
   let ingredientsMap: Record<number, string[]> = {};
 
   if (snackIds.length > 0) {
     const placeholders = snackIds.map(() => '?').join(',');
-    const ingredients = db.prepare(
-      `SELECT snack_id, ingredient_name FROM snack_ingredients WHERE snack_id IN (${placeholders})`
-    ).all(...snackIds) as Array<{ snack_id: number; ingredient_name: string }>;
+    const ingredients = await queryAll<{ snack_id: number; ingredient_name: string }>(
+      `SELECT snack_id, ingredient_name FROM snack_ingredients WHERE snack_id IN (${placeholders})`,
+      snackIds
+    );
 
     for (const ing of ingredients) {
       if (!ingredientsMap[ing.snack_id]) ingredientsMap[ing.snack_id] = [];

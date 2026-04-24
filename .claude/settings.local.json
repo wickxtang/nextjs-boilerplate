@@ -6,7 +6,8 @@
       "Bash(curl -s http://localhost:3000)",
       "Bash(curl *)",
       "Bash(npx -y better-sqlite3)",
-      "Bash(node -e \"const Database = require\\('better-sqlite3'\\); const db = new Database\\('data/app.db'\\); console.log\\(db.prepare\\('SELECT * FROM snacks'\\).all\\(\\)\\); console.log\\(db.prepare\\('SELECT * FROM snack_ingredients'\\).all\\(\\)\\);\")"
+      "Bash(node -e \"const Database = require\\('better-sqlite3'\\); const db = new Database\\('data/app.db'\\); console.log\\(db.prepare\\('SELECT * FROM snacks'\\).all\\(\\)\\); console.log\\(db.prepare\\('SELECT * FROM snack_ingredients'\\).all\\(\\)\\);\")",
+      "Bash(npm uninstall *)"
     ]
   }
 }
