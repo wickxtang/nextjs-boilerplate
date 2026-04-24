@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/app/lib/db';
+import { getCurrentUser } from '@/app/lib/auth';
 
 export async function POST(request: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: '请先登录' }, { status: 401 });
+  }
+
   const body = await request.json();
   const { name, ingredients, riskLevel, riskLabel, interpretation } = body;
 
@@ -10,14 +16,14 @@ export async function POST(request: NextRequest) {
   }
 
   const insertSnack = db.prepare(
-    `INSERT INTO snacks (name, risk_level, risk_label, interpretation, record_time) VALUES (?, ?, ?, ?, date('now'))`
+    `INSERT INTO snacks (user_id, name, risk_level, risk_label, interpretation, record_time) VALUES (?, ?, ?, ?, ?, date('now'))`
   );
   const insertIngredient = db.prepare(
     `INSERT INTO snack_ingredients (snack_id, ingredient_name) VALUES (?, ?)`
   );
 
-  const saveRecord = db.transaction((name: string, ingredients: string[], riskLevel: string, riskLabel: string, interpretation: string) => {
-    const result = insertSnack.run(name, riskLevel || null, riskLabel || null, interpretation || null);
+  const saveRecord = db.transaction((userId: number, name: string, ingredients: string[], riskLevel: string, riskLabel: string, interpretation: string) => {
+    const result = insertSnack.run(userId, name, riskLevel || null, riskLabel || null, interpretation || null);
     const snackId = result.lastInsertRowid;
     for (const ing of ingredients) {
       if (ing.trim()) {
@@ -27,7 +33,7 @@ export async function POST(request: NextRequest) {
     return snackId;
   });
 
-  const snackId = saveRecord(name, ingredients, riskLevel, riskLabel, interpretation);
+  const snackId = saveRecord(user.userId, name, ingredients, riskLevel, riskLabel, interpretation);
 
   return NextResponse.json({ success: true, id: Number(snackId) });
 }

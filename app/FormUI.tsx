@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 const COLORS = {
   green: '#7ecf5f',
@@ -21,6 +22,9 @@ interface OcrResult {
 }
 
 const FormUI = () => {
+  const router = useRouter();
+  const [username, setUsername] = useState('');
+  const [authChecked, setAuthChecked] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
 
@@ -28,6 +32,26 @@ const FormUI = () => {
   const [editIngredients, setEditIngredients] = useState<string[]>([]);
   const [newIngredient, setNewIngredient] = useState('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(res => {
+      if (!res.ok) {
+        router.replace('/login');
+        return;
+      }
+      return res.json();
+    }).then(data => {
+      if (data?.username) {
+        setUsername(data.username);
+        setAuthChecked(true);
+      }
+    });
+  }, [router]);
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.replace('/login');
+  };
 
   const handleImageSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -105,8 +129,38 @@ const FormUI = () => {
     flexShrink: 0,
   };
 
+  if (!authChecked) {
+    return <div style={{ textAlign: 'center', padding: '4rem', color: COLORS.textLight }}>加载中...</div>;
+  }
+
   return (
     <div style={{ maxWidth: '480px', margin: '2rem auto', fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1rem',
+        padding: '0.5rem 0',
+      }}>
+        <span style={{ fontSize: '0.9rem', color: COLORS.text }}>
+          {username}
+        </span>
+        <button
+          type="button"
+          onClick={handleLogout}
+          style={{
+            background: 'none',
+            border: `1px solid ${COLORS.greenLight}`,
+            borderRadius: '6px',
+            padding: '0.3rem 0.75rem',
+            fontSize: '0.8rem',
+            color: COLORS.textLight,
+            cursor: 'pointer',
+          }}
+        >
+          退出登录
+        </button>
+      </div>
       <form
         onSubmit={handleImageSubmit}
         style={{
