@@ -22,6 +22,7 @@ db.exec(`
     risk_level TEXT,
     risk_label TEXT,
     interpretation TEXT,
+    image_data TEXT,
     record_time TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -39,6 +40,9 @@ db.exec(`
 const columns = db.prepare("PRAGMA table_info(snacks)").all() as { name: string }[];
 if (!columns.some(c => c.name === 'user_id')) {
   db.exec(`ALTER TABLE snacks ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE`);
+}
+if (!columns.some(c => c.name === 'image_data')) {
+  db.exec(`ALTER TABLE snacks ADD COLUMN image_data TEXT`);
 }
 
 export default db;

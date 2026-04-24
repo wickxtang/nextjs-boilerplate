@@ -30,6 +30,7 @@ interface Snack {
   riskLevel: string;
   riskLabel: string;
   interpretation: string;
+  imageData: string | null;
   recordTime: string;
   username: string;
   ingredients: string[];
@@ -128,58 +129,76 @@ export default function LibraryPage() {
                 padding: '1rem 1.25rem',
                 border: `1px solid ${COLORS.greenLight}`,
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                      <span style={{ fontWeight: 600, fontSize: '1rem', color: COLORS.text }}>{snack.name}</span>
-                      <span style={{
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        background: riskColor.bg,
-                        color: COLORS.text,
-                        border: `1px solid ${riskColor.border}`,
-                      }}>
-                        {snack.riskLabel}
-                      </span>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  {snack.imageData && (
+                    <img
+                      src={snack.imageData}
+                      alt={snack.name}
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        objectFit: 'cover',
+                        borderRadius: '8px',
+                        border: `1px solid ${COLORS.greenLight}`,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                          <span style={{ fontWeight: 600, fontSize: '1rem', color: COLORS.text }}>{snack.name}</span>
+                          <span style={{
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            background: riskColor.bg,
+                            color: COLORS.text,
+                            border: `1px solid ${riskColor.border}`,
+                          }}>
+                            {snack.riskLabel}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: COLORS.textLight, marginBottom: '0.5rem' }}>
+                          {snack.username} · {snack.recordTime}
+                        </div>
+                      </div>
+                      {isOwner && (
+                        <button
+                          onClick={() => handleDelete(snack.id)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#ccc',
+                            cursor: 'pointer',
+                            fontSize: '0.8rem',
+                            padding: '0.2rem 0.4rem',
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.color = COLORS.red)}
+                          onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
+                        >
+                          删除
+                        </button>
+                      )}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: COLORS.textLight, marginBottom: '0.5rem' }}>
-                      {snack.username} · {snack.recordTime}
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                      {snack.ingredients.map((ing, i) => (
+                        <span key={i} style={{
+                          padding: '0.2rem 0.5rem',
+                          background: COLORS.bg,
+                          borderRadius: '4px',
+                          fontSize: '0.78rem',
+                          color: COLORS.text,
+                          border: `1px solid ${COLORS.greenLight}`,
+                        }}>
+                          {ing}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                  {isOwner && (
-                    <button
-                      onClick={() => handleDelete(snack.id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#ccc',
-                        cursor: 'pointer',
-                        fontSize: '0.8rem',
-                        padding: '0.2rem 0.4rem',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.color = COLORS.red)}
-                      onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
-                    >
-                      删除
-                    </button>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                  {snack.ingredients.map((ing, i) => (
-                    <span key={i} style={{
-                      padding: '0.2rem 0.5rem',
-                      background: COLORS.bg,
-                      borderRadius: '4px',
-                      fontSize: '0.78rem',
-                      color: COLORS.text,
-                      border: `1px solid ${COLORS.greenLight}`,
-                    }}>
-                      {ing}
-                    </span>
-                  ))}
                 </div>
               </div>
             );

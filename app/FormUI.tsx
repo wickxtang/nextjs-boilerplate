@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 const COLORS = {
@@ -13,6 +13,12 @@ const COLORS = {
   textLight: '#6b7a55',
 };
 
+const RISK_OPTIONS = [
+  { value: 'red', label: '高风险' },
+  { value: 'yellow', label: '中风险' },
+  { value: 'blue', label: '低风险' },
+];
+
 interface OcrResult {
   name: string;
   ingredients: string[];
@@ -23,12 +29,15 @@ interface OcrResult {
 
 const FormUI = () => {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [username, setUsername] = useState('');
   const [authChecked, setAuthChecked] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
+  const [imageBase64, setImageBase64] = useState('');
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
 
   const [editName, setEditName] = useState('');
+  const [editRiskLevel, setEditRiskLevel] = useState('blue');
   const [editIngredients, setEditIngredients] = useState<string[]>([]);
   const [newIngredient, setNewIngredient] = useState('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -53,6 +62,22 @@ const FormUI = () => {
     router.replace('/login');
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageUrl(URL.createObjectURL(file));
+      setImageBase64(await fileToBase64(file));
+    }
+  };
+
   const handleImageSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -64,6 +89,7 @@ const FormUI = () => {
       const data = await response.json();
       setOcrResult(data);
       setEditName(data.name || '');
+      setEditRiskLevel(data.riskLevel || 'blue');
       setEditIngredients(data.ingredients || []);
       setSaveStatus('idle');
     } catch (error) {
@@ -83,9 +109,22 @@ const FormUI = () => {
     setEditIngredients(editIngredients.filter((_, i) => i !== index));
   };
 
+  const resetForm = () => {
+    setOcrResult(null);
+    setImageUrl('');
+    setImageBase64('');
+    setEditName('');
+    setEditRiskLevel('blue');
+    setEditIngredients([]);
+    setNewIngredient('');
+    setSaveStatus('idle');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSave = async () => {
     if (!editName.trim() || editIngredients.length === 0) return;
     setSaveStatus('saving');
+    const riskLabel = RISK_OPTIONS.find(o => o.value === editRiskLevel)?.label || '低风险';
     try {
       const res = await fetch('/api/save-record', {
         method: 'POST',
@@ -93,13 +132,14 @@ const FormUI = () => {
         body: JSON.stringify({
           name: editName.trim(),
           ingredients: editIngredients,
-          riskLevel: ocrResult?.riskLevel || '',
-          riskLabel: ocrResult?.riskLabel || '',
+          riskLevel: editRiskLevel,
+          riskLabel,
           interpretation: ocrResult?.interpretation || '',
+          imageData: imageBase64,
         }),
       });
       if (res.ok) {
-        setSaveStatus('saved');
+        resetForm();
       } else {
         setSaveStatus('error');
       }
@@ -209,32 +249,31 @@ const FormUI = () => {
         <label
           style={{
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: imageUrl ? 'row' as const : 'column' as const,
             alignItems: 'center',
-            gap: '0.5rem',
-            padding: '2rem 1rem',
+            justifyContent: 'center',
+            gap: imageUrl ? '0.4rem' : '0.5rem',
+            padding: imageUrl ? '0.6rem 1rem' : '2rem 1rem',
             borderRadius: '8px',
             border: `2px dashed ${COLORS.green}`,
             background: '#fff',
             cursor: 'pointer',
-            transition: 'border-color 0.2s',
+            transition: 'border-color 0.2s, padding 0.2s',
             color: COLORS.textLight,
-            fontSize: '0.9rem',
+            fontSize: imageUrl ? '0.8rem' : '0.9rem',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.borderColor = COLORS.greenDark)}
           onMouseLeave={(e) => (e.currentTarget.style.borderColor = COLORS.green)}
         >
-          <span style={{ fontSize: '2rem' }}>📷</span>
-          <span>{imageUrl ? '点击更换图片' : '点击或拖拽上传食品图片'}</span>
+          <span style={{ fontSize: imageUrl ? '1rem' : '2rem' }}>📷</span>
+          <span>{imageUrl ? '更换图片' : '点击或拖拽上传食品图片'}</span>
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             name="image"
             required
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) setImageUrl(URL.createObjectURL(file));
-            }}
+            onChange={handleFileChange}
             style={{ display: 'none' }}
           />
         </label>
@@ -342,6 +381,19 @@ const FormUI = () => {
           </div>
 
           <div>
+            <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>风险等级</label>
+            <select
+              value={editRiskLevel}
+              onChange={(e) => setEditRiskLevel(e.target.value)}
+              style={{ ...inputStyle, marginTop: '0.35rem' }}
+            >
+              {RISK_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>配料列表</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.35rem' }}>
               {editIngredients.map((ing, idx) => (
@@ -394,7 +446,7 @@ const FormUI = () => {
             disabled={saveStatus === 'saving' || !editName.trim() || editIngredients.length === 0}
             style={{
               padding: '0.75rem 1.5rem',
-              background: saveStatus === 'saved' ? COLORS.greenDark : COLORS.green,
+              background: COLORS.green,
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
@@ -404,7 +456,7 @@ const FormUI = () => {
               opacity: (!editName.trim() || editIngredients.length === 0) ? 0.5 : 1,
             }}
           >
-            {saveStatus === 'saving' ? '保存中...' : saveStatus === 'saved' ? '已保存' : '保存到数据库'}
+            {saveStatus === 'saving' ? '保存中...' : '保存到数据库'}
           </button>
 
           {saveStatus === 'error' && (

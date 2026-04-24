@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     risk_level: string;
     risk_label: string;
     interpretation: string;
+    image_data: string | null;
     record_time: string;
     created_at: string;
     username: string;
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
     riskLevel: s.risk_level,
     riskLabel: s.risk_label,
     interpretation: s.interpretation,
+    imageData: s.image_data,
     recordTime: s.record_time,
     createdAt: s.created_at,
     username: s.username,
