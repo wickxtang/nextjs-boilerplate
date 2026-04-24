@@ -145,21 +145,39 @@ const FormUI = () => {
         <span style={{ fontSize: '0.9rem', color: COLORS.text }}>
           {username}
         </span>
-        <button
-          type="button"
-          onClick={handleLogout}
-          style={{
-            background: 'none',
-            border: `1px solid ${COLORS.greenLight}`,
-            borderRadius: '6px',
-            padding: '0.3rem 0.75rem',
-            fontSize: '0.8rem',
-            color: COLORS.textLight,
-            cursor: 'pointer',
-          }}
-        >
-          退出登录
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={() => router.push('/library')}
+            style={{
+              background: 'none',
+              border: `1px solid ${COLORS.greenLight}`,
+              borderRadius: '6px',
+              padding: '0.3rem 0.75rem',
+              fontSize: '0.8rem',
+              color: COLORS.greenDark,
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            食物库
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            style={{
+              background: 'none',
+              border: `1px solid ${COLORS.greenLight}`,
+              borderRadius: '6px',
+              padding: '0.3rem 0.75rem',
+              fontSize: '0.8rem',
+              color: COLORS.textLight,
+              cursor: 'pointer',
+            }}
+          >
+            退出登录
+          </button>
+        </div>
       </div>
       <form
         onSubmit={handleImageSubmit}
