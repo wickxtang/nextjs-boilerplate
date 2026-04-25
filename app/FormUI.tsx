@@ -292,6 +292,24 @@ const FormUI = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             type="button"
+            onClick={() => router.push('/stats')}
+            style={{
+              background: 'none',
+              border: `1px solid ${COLORS.greenLight}`,
+              borderRadius: '6px',
+              padding: '0.4rem 1rem',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              fontWeight: 600,
+              color: COLORS.greenDark,
+            }}
+          >
+            分析
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            type="button"
             onClick={() => router.push('/knowledge')}
             style={{
               background: 'none',

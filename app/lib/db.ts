@@ -42,6 +42,16 @@ function ensureInit(): Promise<void> {
         ingredient_name TEXT NOT NULL,
         FOREIGN KEY (snack_id) REFERENCES snacks(id) ON DELETE CASCADE
       );
+
+      CREATE TABLE IF NOT EXISTS checkins (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        snack_id INTEGER NOT NULL,
+        checkin_date TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (snack_id) REFERENCES snacks(id) ON DELETE CASCADE
+      );
     `);
   }
   return _initialized;

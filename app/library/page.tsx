@@ -181,6 +181,19 @@ export default function LibraryPage() {
     if (res.ok) setSnacks(prev => prev.filter(s => s.id !== id));
   };
 
+  const handleCheckin = async (snackId: number) => {
+    const res = await fetch('/api/checkins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ snackId }),
+    });
+    if (res.ok) {
+      alert('打卡成功！已记录到今日食用清单。');
+    } else {
+      alert('打卡失败，请重试');
+    }
+  };
+
   const startEdit = (snack: Snack) => {
     setEditingId(snack.id);
     setEditState({ name: snack.name, riskLevel: snack.riskLevel, ingredients: [...snack.ingredients], newIngredient: '', imageData: snack.imageData, imageChanged: false });
@@ -405,22 +418,32 @@ export default function LibraryPage() {
                         {snack.username} · {snack.recordTime}
                       </div>
                     </div>
-                    {isOwner && (
-                      <div style={{ display: 'flex', gap: '0.3rem', flexShrink: 0, marginLeft: '0.5rem' }}>
-                        <button onClick={() => startEdit(snack)} style={{
-                          background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem 0.4rem',
-                        }}
-                          onMouseEnter={e => (e.currentTarget.style.color = COLORS.greenDark)}
-                          onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
-                        >编辑</button>
-                        <button onClick={() => handleDelete(snack.id)} style={{
-                          background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem 0.4rem',
-                        }}
-                          onMouseEnter={e => (e.currentTarget.style.color = COLORS.red)}
-                          onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
-                        >删除</button>
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', gap: '0.3rem', flexShrink: 0, marginLeft: '0.5rem' }}>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleCheckin(snack.id)}
+                        style={smallBtnStyle}
+                      >
+                        打卡
+                      </motion.button>
+                      {isOwner && (
+                        <>
+                          <button onClick={() => startEdit(snack)} style={{
+                            background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem 0.4rem',
+                          }}
+                            onMouseEnter={e => (e.currentTarget.style.color = COLORS.greenDark)}
+                            onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
+                          >编辑</button>
+                          <button onClick={() => handleDelete(snack.id)} style={{
+                            background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem 0.4rem',
+                          }}
+                            onMouseEnter={e => (e.currentTarget.style.color = COLORS.red)}
+                            onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
+                          >删除</button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
                     {snack.ingredients.map(renderIngredientTag)}
@@ -442,6 +465,18 @@ export default function LibraryPage() {
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0.5rem 0' }}>
         <h1 style={{ margin: 0, fontSize: '1.3rem', color: COLORS.greenDark, fontWeight: 700 }}>{username || '食物库'}</h1>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => router.push('/stats')}
+            style={{
+              background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
+              padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.greenDark, cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            健康分析
+          </motion.button>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
