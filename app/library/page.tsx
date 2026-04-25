@@ -372,27 +372,31 @@ export default function LibraryPage() {
             }}>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 {snack.imageData && (
-                  <img src={snack.imageData} alt={snack.name} style={{
-                    width: '64px', height: '64px', objectFit: 'cover',
-                    borderRadius: '8px', border: `1px solid ${COLORS.greenLight}`, flexShrink: 0,
-                  }} />
+                  <div style={{ display: 'grid', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                    <img src={snack.imageData} alt={snack.name} style={{
+                      width: '64px', height: '64px', objectFit: 'cover',
+                      borderRadius: '8px', border: `1px solid ${COLORS.greenLight}`, flexShrink: 0,
+                    }} />
+                    <span style={{
+                      padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600,
+                      background: riskColor.bg, color: COLORS.text, border: `1px solid ${riskColor.border}`,
+                    }}>{snack.riskLabel}
+                    </span>
+                  </div>
+
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                        <span style={{ fontWeight: 600, fontSize: '1rem', color: COLORS.text }}>{snack.name}</span>
-                        <span style={{
-                          padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600,
-                          background: riskColor.bg, color: COLORS.text, border: `1px solid ${riskColor.border}`,
-                        }}>{snack.riskLabel}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                        <span style={{ fontWeight: 600, fontSize: '1rem', color: COLORS.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{snack.name}</span>
                       </div>
                       <div style={{ fontSize: '0.8rem', color: COLORS.textLight, marginBottom: '0.5rem' }}>
                         {snack.username} · {snack.recordTime}
                       </div>
                     </div>
                     {isOwner && (
-                      <div style={{ display: 'flex', gap: '0.3rem' }}>
+                      <div style={{ display: 'flex', gap: '0.3rem', flexShrink: 0, marginLeft: '0.5rem' }}>
                         <button onClick={() => startEdit(snack)} style={{
                           background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem 0.4rem',
                         }}
