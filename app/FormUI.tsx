@@ -276,6 +276,22 @@ const FormUI = () => {
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button
             type="button"
+            onClick={() => router.push('/knowledge')}
+            style={{
+              background: 'none',
+              border: `1px solid ${COLORS.greenLight}`,
+              borderRadius: '6px',
+              padding: '0.4rem 1rem',
+              fontSize: '0.95rem',
+              cursor: 'pointer',
+              fontWeight: 600,
+              color: COLORS.greenDark,
+            }}
+          >
+            知识库
+          </button>
+          <button
+            type="button"
             onClick={() => router.push('/library')}
             style={{
               background: 'none',

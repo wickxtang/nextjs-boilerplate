@@ -433,15 +433,27 @@ export default function LibraryPage() {
     <main style={{ width: '100%', maxWidth: '720px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1 style={{ margin: 0, fontSize: '1.3rem', color: COLORS.greenDark }}>食物库</h1>
-        <button
-          onClick={() => router.push('/')}
-          style={{
-            background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
-            padding: '0.3rem 0.75rem', fontSize: '0.8rem', color: COLORS.textLight, cursor: 'pointer',
-          }}
-        >
-          返回首页
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={() => router.push('/knowledge')}
+            style={{
+              background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
+              padding: '0.3rem 0.75rem', fontSize: '0.8rem', color: COLORS.greenDark, cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            健康知识
+          </button>
+          <button
+            onClick={() => router.push('/')}
+            style={{
+              background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
+              padding: '0.3rem 0.75rem', fontSize: '0.8rem', color: COLORS.textLight, cursor: 'pointer',
+            }}
+          >
+            返回首页
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', borderBottom: `1px solid ${COLORS.greenLight}`, marginBottom: '1rem' }}>
