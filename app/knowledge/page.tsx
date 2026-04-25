@@ -1,6 +1,7 @@
 'use client';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const COLORS = {
   green: '#7ecf5f',
@@ -58,6 +59,18 @@ const IARC_LEVELS = [
 
 export default function KnowledgePage() {
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredLevels = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return IARC_LEVELS;
+    return IARC_LEVELS.filter(item => 
+      item.title.toLowerCase().includes(query) ||
+      item.description.toLowerCase().includes(query) ||
+      item.examples.toLowerCase().includes(query) ||
+      item.advice.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
 
   return (
     <main style={{ width: '100%', maxWidth: '800px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif', color: COLORS.text }}>
@@ -101,6 +114,40 @@ export default function KnowledgePage() {
           style={{ fontSize: '1.2rem', borderLeft: `4px solid ${COLORS.green}`, paddingLeft: '0.75rem', marginBottom: '1.5rem' }}>
           IARC 致癌物分级详解
         </motion.h2>
+        
+        {/* 搜索框 */}
+        <div style={{ marginBottom: '2rem', position: 'relative' }}>
+          <input
+            type="text"
+            placeholder="搜索关键词（如：代糖、培根、辐射...）"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.7rem 1rem',
+              paddingLeft: '2.5rem',
+              borderRadius: '10px',
+              border: `1px solid ${COLORS.greenLight}`,
+              fontSize: '0.9rem',
+              outline: 'none',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+              boxSizing: 'border-box'
+            }}
+          />
+          <span style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              style={{
+                position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', color: COLORS.textLight, cursor: 'pointer', fontSize: '1.1rem'
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+
         <motion.p 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -111,39 +158,53 @@ export default function KnowledgePage() {
         </motion.p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {IARC_LEVELS.map((item, idx) => (
-            <motion.div 
-              key={item.level}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 + 0.3 }}
-              whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-              style={{
-                padding: '1.25rem',
-                borderRadius: '12px',
-                background: item.bgColor,
-                border: `1px solid ${item.color}33`,
-                cursor: 'default',
-              }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                <span style={{
-                  background: item.color, color: '#fff', padding: '0.2rem 0.6rem',
-                  borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600,
-                }}>{item.level}</span>
-                <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{item.title}</span>
-              </div>
-              <p style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: COLORS.text }}>{item.description}</p>
-              <p style={{ fontSize: '0.85rem', margin: '0 0 0.5rem', color: COLORS.textLight }}>
-                <strong>常见例子：</strong> {item.examples}
-              </p>
-              <div style={{
-                marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.6)',
-                borderRadius: '6px', fontSize: '0.85rem', color: item.color, fontWeight: 500,
-              }}>
-                💡 专家建议：{item.advice}
-              </div>
-            </motion.div>
-          ))}
+          <AnimatePresence mode="popLayout">
+            {filteredLevels.length > 0 ? (
+              filteredLevels.map((item, idx) => (
+                <motion.div 
+                  key={item.level}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  whileHover={{ scale: 1.01, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                  style={{
+                    padding: '1.25rem',
+                    borderRadius: '12px',
+                    background: item.bgColor,
+                    border: `1px solid ${item.color}33`,
+                    cursor: 'default',
+                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                    <span style={{
+                      background: item.color, color: '#fff', padding: '0.2rem 0.6rem',
+                      borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600,
+                    }}>{item.level}</span>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{item.title}</span>
+                  </div>
+                  <p style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: COLORS.text }}>{item.description}</p>
+                  <p style={{ fontSize: '0.85rem', margin: '0 0 0.5rem', color: COLORS.textLight }}>
+                    <strong>常见例子：</strong> {item.examples}
+                  </p>
+                  <div style={{
+                    marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.6)',
+                    borderRadius: '6px', fontSize: '0.85rem', color: item.color, fontWeight: 500,
+                  }}>
+                    💡 专家建议：{item.advice}
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                style={{ textAlign: 'center', color: COLORS.textLight, padding: '2rem' }}
+              >
+                未找到相关知识内容
+              </motion.p>
+            )}
+          </AnimatePresence>
         </div>
       </section>
 

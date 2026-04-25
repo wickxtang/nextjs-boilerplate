@@ -38,6 +38,7 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
   const [selectedSnackId, setSelectedSnackId] = useState<string>('');
+  const [snackSearchQuery, setSnackSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchCheckins = async () => {
@@ -304,42 +305,73 @@ export default function StatsPage() {
           />
           <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
             <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.75rem', color: COLORS.greenDark }}>补录零食 ({selectedDate.toLocaleDateString()})</h3>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <select 
-                value={selectedSnackId} 
-                onChange={(e) => setSelectedSnackId(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '0.4rem',
-                  borderRadius: '6px',
-                  border: `1px solid ${COLORS.greenLight}`,
-                  fontSize: '0.85rem',
-                  outline: 'none'
-                }}
-              >
-                <option value="">选择要补录的食物...</option>
-                {allSnacks.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                disabled={!selectedSnackId || isSubmitting}
-                onClick={handleRetroactiveCheckin}
-                style={{
-                  padding: '0.4rem 0.8rem',
-                  background: COLORS.green,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '0.85rem',
-                  cursor: (selectedSnackId && !isSubmitting) ? 'pointer' : 'not-allowed',
-                  opacity: (selectedSnackId && !isSubmitting) ? 1 : 0.6
-                }}
-              >
-                {isSubmitting ? '...' : '补录'}
-              </motion.button>
+            
+            {/* 补录搜索与选择 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type="text"
+                  placeholder="输入名称搜索食物..."
+                  value={snackSearchQuery}
+                  onChange={(e) => setSnackSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.4rem 0.6rem',
+                    borderRadius: '6px',
+                    border: `1px solid ${COLORS.greenLight}`,
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {snackSearchQuery && (
+                  <span 
+                    onClick={() => setSnackSearchQuery('')}
+                    style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#ccc', fontSize: '1rem' }}
+                  >×</span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <select 
+                  value={selectedSnackId} 
+                  onChange={(e) => setSelectedSnackId(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '0.4rem',
+                    borderRadius: '6px',
+                    border: `1px solid ${COLORS.greenLight}`,
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="">{snackSearchQuery ? '在搜索结果中选择...' : '从全部食物中选择...'}</option>
+                  {allSnacks
+                    .filter(s => s.name.toLowerCase().includes(snackSearchQuery.toLowerCase()))
+                    .map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))
+                  }
+                </select>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  disabled={!selectedSnackId || isSubmitting}
+                  onClick={handleRetroactiveCheckin}
+                  style={{
+                    padding: '0.4rem 0.8rem',
+                    background: COLORS.green,
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '0.85rem',
+                    cursor: (selectedSnackId && !isSubmitting) ? 'pointer' : 'not-allowed',
+                    opacity: (selectedSnackId && !isSubmitting) ? 1 : 0.6
+                  }}
+                >
+                  {isSubmitting ? '...' : '补录'}
+                </motion.button>
+              </div>
             </div>
           </div>
 

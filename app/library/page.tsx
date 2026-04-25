@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ECharts } from 'echarts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -69,6 +69,7 @@ export default function LibraryPage() {
   const [username, setUsername] = useState('');
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [editState, setEditState] = useState<EditState>({ name: '', riskLevel: 'blue', ingredients: [], newIngredient: '', imageData: null, imageChanged: false });
   const [saving, setSaving] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -238,6 +239,15 @@ export default function LibraryPage() {
     }
   };
 
+  const filteredSnacks = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return snacks;
+    return snacks.filter(s => 
+      s.name.toLowerCase().includes(query) || 
+      s.ingredients.some(ing => ing.toLowerCase().includes(query))
+    );
+  }, [snacks, searchQuery]);
+
   const tabStyle = (active: boolean): React.CSSProperties => ({
     flex: 1,
     padding: '0.6rem',
@@ -287,173 +297,192 @@ export default function LibraryPage() {
     if (loading) {
       return <p style={{ textAlign: 'center', color: COLORS.textLight, padding: '2rem' }}>加载中...</p>;
     }
-    if (snacks.length === 0) {
-      return (
-        <p style={{ textAlign: 'center', color: COLORS.textLight, padding: '2rem' }}>
-          {tab === 'mine' ? '还没有记录，去首页添加一条吧' : '暂无记录'}
-        </p>
-      );
-    }
+
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
-        {snacks.map(snack => {
-          const riskColor = RISK_COLORS[snack.riskLevel] || RISK_COLORS.blue;
-          const isOwner = snack.userId === currentUserId;
-          const isEditing = editingId === snack.id;
-
-          if (isEditing) {
-            return (
-              <div key={snack.id} style={{
-                gridColumn: '1 / -1',
-                background: '#fff', borderRadius: '10px', padding: '1rem 1.25rem',
-                border: `2px solid ${COLORS.green}`, display: 'flex', flexDirection: 'column', gap: '0.75rem',
-              }}>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                  <label style={{ cursor: 'pointer', flexShrink: 0, position: 'relative' }}>
-                    {editState.imageData ? (
-                      <img src={editState.imageData} alt="预览" style={{
-                        width: '64px', height: '64px', objectFit: 'cover',
-                        borderRadius: '8px', border: `2px dashed ${COLORS.green}`,
-                      }} />
-                    ) : (
-                      <div style={{
-                        width: '64px', height: '64px', borderRadius: '8px',
-                        border: `2px dashed ${COLORS.green}`, background: COLORS.bg,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem',
-                      }}>📷</div>
-                    )}
-                    <div style={{
-                      position: 'absolute', bottom: 0, left: 0, right: 0,
-                      background: 'rgba(0,0,0,0.45)', color: '#fff',
-                      fontSize: '0.6rem', textAlign: 'center',
-                      borderRadius: '0 0 6px 6px', padding: '1px 0',
-                    }}>换图</div>
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = () => setEditState(s => ({ ...s, imageData: reader.result as string, imageChanged: true }));
-                        reader.readAsDataURL(file);
-                      }
-                    }} />
-                  </label>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <input type="text" value={editState.name} onChange={e => setEditState(s => ({ ...s, name: e.target.value }))} style={inputStyle} />
-                    <select value={editState.riskLevel} onChange={e => setEditState(s => ({ ...s, riskLevel: e.target.value }))} style={inputStyle}>
-                      {RISK_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '0.8rem', color: COLORS.text, fontWeight: 600 }}>配料</span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.3rem' }}>
-                    {editState.ingredients.map((ing, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{
-                          flex: 1, padding: '0.3rem 0.6rem', background: COLORS.bg,
-                          borderRadius: '4px', border: `1px solid ${COLORS.greenLight}`,
-                          fontSize: '0.82rem', color: COLORS.text,
-                        }}>{ing}</span>
-                        <button type="button" onClick={() => removeEditIngredient(idx)}
-                          style={{ ...smallBtnStyle, background: COLORS.red, fontSize: '0.75rem' }}>删除</button>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
-                    <input type="text" value={editState.newIngredient}
-                      onChange={e => setEditState(s => ({ ...s, newIngredient: e.target.value }))}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEditIngredient(); } }}
-                      placeholder="添加配料" style={inputStyle} />
-                    <button type="button" onClick={addEditIngredient} style={smallBtnStyle}>添加</button>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={cancelEdit} style={{
-                    ...smallBtnStyle, background: 'transparent', color: COLORS.textLight,
-                    border: `1px solid ${COLORS.greenLight}`,
-                  }}>取消</button>
-                  <button type="button" onClick={handleSaveEdit} disabled={saving || !editState.name.trim() || editState.ingredients.length === 0}
-                    style={{ ...smallBtnStyle, opacity: (!editState.name.trim() || editState.ingredients.length === 0) ? 0.5 : 1 }}>
-                    {saving ? '保存中...' : '保存'}
-                  </button>
-                </div>
-              </div>
-            );
-          }
-
-          return (
-            <div key={snack.id} style={{
-              background: '#fff', borderRadius: '10px', padding: '1rem 1.25rem',
+      <>
+        <div style={{ marginBottom: '1.25rem', position: 'relative' }}>
+          <input
+            type="text"
+            placeholder="搜索食物名称或配料..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              ...inputStyle,
+              padding: '0.7rem 1rem',
+              paddingLeft: '2.8rem',
+              fontSize: '0.95rem',
               border: `1px solid ${COLORS.greenLight}`,
-            }}>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                {snack.imageData && (
-                  <div style={{ display: 'grid', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-                    <img src={snack.imageData} alt={snack.name} style={{
-                      width: '64px', height: '64px', objectFit: 'cover',
-                      borderRadius: '8px', border: `1px solid ${COLORS.greenLight}`, flexShrink: 0,
-                    }} />
-                    <span style={{
-                      padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600,
-                      background: riskColor.bg, color: COLORS.text, border: `1px solid ${riskColor.border}`,
-                    }}>{snack.riskLabel}
-                    </span>
-                  </div>
+              boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+              borderRadius: '10px',
+            }}
+          />
+          <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1.1rem', opacity: 0.6 }}>🔍</span>
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              style={{
+                position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', color: COLORS.textLight, cursor: 'pointer', fontSize: '1.2rem'
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
 
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                        <span 
-                          title={snack.name}
-                          style={{ fontWeight: 600, fontSize: '1rem', color: COLORS.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}
-                        >
-                          {snack.name}
+        {filteredSnacks.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem 1rem', background: '#fff', borderRadius: '12px', border: `1px dashed ${COLORS.greenLight}` }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🍃</div>
+            <p style={{ color: COLORS.textLight, margin: 0, fontSize: '0.95rem' }}>
+              {searchQuery ? `未找到与 "${searchQuery}" 相关的食物` : (tab === 'mine' ? '你还没有记录过食物哦，快去首页扫码添加吧' : '暂无食物记录')}
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+            {filteredSnacks.map(snack => {
+              const riskColor = RISK_COLORS[snack.riskLevel] || RISK_COLORS.blue;
+              const isOwner = snack.userId === currentUserId;
+              const isEditing = editingId === snack.id;
+
+              if (isEditing) {
+                return (
+                  <div key={snack.id} style={{
+                    gridColumn: '1 / -1',
+                    background: '#fff', borderRadius: '12px', padding: '1.25rem',
+                    border: `2px solid ${COLORS.green}`, boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+                    display: 'flex', flexDirection: 'column', gap: '1rem',
+                  }}>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                      <label style={{ cursor: 'pointer', flexShrink: 0, position: 'relative' }}>
+                        {editState.imageData ? (
+                          <img src={editState.imageData} alt="预览" style={{
+                            width: '80px', height: '80px', objectFit: 'cover',
+                            borderRadius: '10px', border: `2px dashed ${COLORS.green}`,
+                          }} />
+                        ) : (
+                          <div style={{
+                            width: '80px', height: '80px', borderRadius: '10px',
+                            border: `2px dashed ${COLORS.green}`, background: COLORS.bg,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem',
+                          }}>📷</div>
+                        )}
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = () => setEditState(s => ({ ...s, imageData: reader.result as string, imageChanged: true }));
+                            reader.readAsDataURL(file);
+                          }
+                        }} />
+                      </label>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                        <input type="text" placeholder="食物名称" value={editState.name} onChange={e => setEditState(s => ({ ...s, name: e.target.value }))} style={{ ...inputStyle, fontSize: '1rem', fontWeight: 600 }} />
+                        <select value={editState.riskLevel} onChange={e => setEditState(s => ({ ...s, riskLevel: e.target.value }))} style={inputStyle}>
+                          {RISK_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 700 }}>配料清单</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
+                        {editState.ingredients.map((ing, idx) => (
+                          <div key={idx} style={{ 
+                            display: 'flex', alignItems: 'center', gap: '0.2rem',
+                            padding: '0.25rem 0.5rem', background: COLORS.bg,
+                            borderRadius: '6px', border: `1px solid ${COLORS.greenLight}`,
+                          }}>
+                            <span style={{ fontSize: '0.85rem', color: COLORS.text }}>{ing}</span>
+                            <button type="button" onClick={() => removeEditIngredient(idx)}
+                              style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer', padding: '0 2px', fontSize: '1rem', fontWeight: 700 }}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                        <input type="text" value={editState.newIngredient}
+                          onChange={e => setEditState(s => ({ ...s, newIngredient: e.target.value }))}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEditIngredient(); } }}
+                          placeholder="添加配料..." style={inputStyle} />
+                        <button type="button" onClick={addEditIngredient} style={smallBtnStyle}>添加</button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                      <button type="button" onClick={cancelEdit} style={{
+                        padding: '0.5rem 1.25rem', background: 'none', color: COLORS.textLight,
+                        border: `1px solid ${COLORS.greenLight}`, borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem'
+                      }}>取消</button>
+                      <button type="button" onClick={handleSaveEdit} disabled={saving || !editState.name.trim() || editState.ingredients.length === 0}
+                        style={{ 
+                          padding: '0.5rem 1.5rem', background: COLORS.green, color: '#fff',
+                          border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
+                          opacity: (saving || !editState.name.trim() || editState.ingredients.length === 0) ? 0.5 : 1 
+                        }}>
+                        {saving ? '保存中...' : '保存修改'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <motion.div 
+                  layout
+                  key={snack.id} 
+                  style={{
+                    background: '#fff', borderRadius: '12px', padding: '1rem',
+                    border: `1px solid ${COLORS.greenLight}`,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                  }}>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    {snack.imageData && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flexShrink: 0 }}>
+                        <img src={snack.imageData} alt={snack.name} style={{
+                          width: '72px', height: '72px', objectFit: 'cover',
+                          borderRadius: '10px', border: `1px solid ${COLORS.greenLight}`,
+                        }} />
+                        <span style={{
+                          textAlign: 'center', padding: '0.15rem 0', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 700,
+                          background: riskColor.bg, color: COLORS.text, border: `1px solid ${riskColor.border}`,
+                        }}>{snack.riskLabel}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: COLORS.textLight, marginBottom: '0.5rem' }}>
-                        {snack.username} · {snack.recordTime}
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <span 
+                            title={snack.name}
+                            style={{ fontWeight: 700, fontSize: '1.05rem', color: COLORS.text, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                          >
+                            {snack.name}
+                          </span>
+                          <div style={{ fontSize: '0.75rem', color: COLORS.textLight, marginTop: '0.2rem' }}>
+                            {snack.username} · {snack.recordTime}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleCheckin(snack.id)} style={{ ...smallBtnStyle, padding: '0.25rem 0.5rem', background: COLORS.greenLight, color: COLORS.greenDark, fontWeight: 700 }}>打卡</motion.button>
+                          {isOwner && (
+                            <div style={{ position: 'relative' }}>
+                               <button onClick={() => startEdit(snack)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1.1rem', padding: '0 4px' }} title="编辑">✎</button>
+                               <button onClick={() => handleDelete(snack.id)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1.1rem', padding: '0 4px' }} title="删除">×</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.6rem' }}>
+                        {snack.ingredients.slice(0, 6).map(renderIngredientTag)}
+                        {snack.ingredients.length > 6 && <span style={{ fontSize: '0.7rem', color: COLORS.textLight, alignSelf: 'center' }}>...</span>}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.3rem', flexShrink: 0, marginLeft: '0.5rem' }}>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleCheckin(snack.id)}
-                        style={smallBtnStyle}
-                      >
-                        打卡
-                      </motion.button>
-                      {isOwner && (
-                        <>
-                          <button onClick={() => startEdit(snack)} style={{
-                            background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem 0.4rem',
-                          }}
-                            onMouseEnter={e => (e.currentTarget.style.color = COLORS.greenDark)}
-                            onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
-                          >编辑</button>
-                          <button onClick={() => handleDelete(snack.id)} style={{
-                            background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem 0.4rem',
-                          }}
-                            onMouseEnter={e => (e.currentTarget.style.color = COLORS.red)}
-                            onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
-                          >删除</button>
-                        </>
-                      )}
-                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                    {snack.ingredients.map(renderIngredientTag)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </>
     );
   };
 
@@ -465,49 +494,16 @@ export default function LibraryPage() {
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0.5rem 0' }}>
         <h1 style={{ margin: 0, fontSize: '1.3rem', color: COLORS.greenDark, fontWeight: 700 }}>{username || '食物库'}</h1>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => router.push('/stats')}
-            style={{
-              background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
-              padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.greenDark, cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            健康分析
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => router.push('/knowledge')}
-            style={{
-              background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
-              padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.greenDark, cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            知识库
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => router.push('/')}
-            style={{
-              background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
-              padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.text, cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            首页
-          </motion.button>
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => router.push('/stats')} style={{ background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px', padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.greenDark, cursor: 'pointer', fontWeight: 600 }}>健康分析</motion.button>
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => router.push('/knowledge')} style={{ background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px', padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.greenDark, cursor: 'pointer', fontWeight: 600 }}>知识库</motion.button>
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => router.push('/')} style={{ background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px', padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.text, cursor: 'pointer', fontWeight: 600 }}>首页</motion.button>
         </div>
       </motion.div>
 
-      <div style={{ display: 'flex', borderBottom: `1px solid ${COLORS.greenLight}`, marginBottom: '1rem' }}>
-        <button onClick={() => { setTab('mine'); setEditingId(null); }} style={tabStyle(tab === 'mine')}>我的食物库</button>
-        <button onClick={() => { setTab('all'); setEditingId(null); }} style={tabStyle(tab === 'all')}>所有食物库</button>
-        <button onClick={() => { setTab('graph'); setEditingId(null); }} style={tabStyle(tab === 'graph')}>配料图谱</button>
+      <div style={{ display: 'flex', borderBottom: `1px solid ${COLORS.greenLight}`, marginBottom: '1.25rem' }}>
+        <button onClick={() => { setTab('mine'); setEditingId(null); setSearchQuery(''); }} style={tabStyle(tab === 'mine')}>我的食物库</button>
+        <button onClick={() => { setTab('all'); setEditingId(null); setSearchQuery(''); }} style={tabStyle(tab === 'all')}>所有食物库</button>
+        <button onClick={() => { setTab('graph'); setEditingId(null); setSearchQuery(''); }} style={tabStyle(tab === 'graph')}>配料图谱</button>
       </div>
 
       <AnimatePresence mode="wait">
@@ -520,9 +516,9 @@ export default function LibraryPage() {
         >
           {tab === 'graph' ? (
             <div>
-              <div ref={chartRef} style={{ width: '100%', height: 'calc(100vh - 200px)', minHeight: '500px', background: '#fff', borderRadius: '10px', border: `1px solid ${COLORS.greenLight}` }} />
-              <p style={{ fontSize: '0.78rem', color: COLORS.textLight, textAlign: 'center', marginTop: '0.5rem' }}>
-                点击配料节点查看详情 · 拖拽移动节点 · 滚轮缩放
+              <div ref={chartRef} style={{ width: '100%', height: 'calc(100vh - 200px)', minHeight: '500px', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}`, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }} />
+              <p style={{ fontSize: '0.78rem', color: COLORS.textLight, textAlign: 'center', marginTop: '0.75rem' }}>
+                💡 点击配料节点查看详情 · 拖拽移动节点 · 滚轮缩放
               </p>
             </div>
           ) : renderListView()}
