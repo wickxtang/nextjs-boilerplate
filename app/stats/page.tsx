@@ -32,9 +32,17 @@ interface Checkin {
 export default function StatsPage() {
   const router = useRouter();
   const [checkins, setCheckins] = useState<Checkin[]>([]);
+  const [allSnacks, setAllSnacks] = useState<{id: number, name: string}[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
+  const [selectedSnackId, setSelectedSnackId] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchCheckins = async () => {
+    const res = await fetch('/api/checkins');
+    if (res.ok) setCheckins(await res.json());
+  };
 
   useEffect(() => {
     fetch('/api/auth/me').then(res => {
@@ -44,13 +52,40 @@ export default function StatsPage() {
       if (data?.username) setUsername(data.username);
     });
 
-    fetch('/api/checkins')
+    fetchCheckins().then(() => setLoading(false));
+
+    // 获取所有零食供补录选择
+    fetch('/api/snacks?scope=all')
       .then(res => res.json())
-      .then(data => {
-        setCheckins(data);
-        setLoading(false);
-      });
+      .then(data => setAllSnacks(data));
   }, [router]);
+
+  const handleRetroactiveCheckin = async () => {
+    if (!selectedSnackId) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/checkins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          snackId: parseInt(selectedSnackId),
+          date: selectedDate.toLocaleDateString('en-CA')
+        }),
+      });
+      if (res.ok) {
+        await fetchCheckins();
+        setSelectedSnackId('');
+        alert('补录成功！');
+      } else {
+        alert('补录失败，请重试');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('发生错误');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // 获取选中日期的记录
   const dayRecords = useMemo(() => {
@@ -139,6 +174,47 @@ export default function StatsPage() {
             value={selectedDate}
             tileClassName={tileClassName}
           />
+          <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
+            <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.75rem', color: COLORS.greenDark }}>补录零食 ({selectedDate.toLocaleDateString()})</h3>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <select 
+                value={selectedSnackId} 
+                onChange={(e) => setSelectedSnackId(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '0.4rem',
+                  borderRadius: '6px',
+                  border: `1px solid ${COLORS.greenLight}`,
+                  fontSize: '0.85rem',
+                  outline: 'none'
+                }}
+              >
+                <option value="">选择要补录的食物...</option>
+                {allSnacks.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                disabled={!selectedSnackId || isSubmitting}
+                onClick={handleRetroactiveCheckin}
+                style={{
+                  padding: '0.4rem 0.8rem',
+                  background: COLORS.green,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                  cursor: (selectedSnackId && !isSubmitting) ? 'pointer' : 'not-allowed',
+                  opacity: (selectedSnackId && !isSubmitting) ? 1 : 0.6
+                }}
+              >
+                {isSubmitting ? '...' : '补录'}
+              </motion.button>
+            </div>
+          </div>
+
           <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
             <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.5rem' }}>{selectedDate.toLocaleDateString()} 的记录</h3>
             {dayRecords.length > 0 ? (
