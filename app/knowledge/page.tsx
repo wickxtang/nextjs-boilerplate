@@ -1,5 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 
 const COLORS = {
   green: '#7ecf5f',
@@ -60,10 +61,15 @@ export default function KnowledgePage() {
 
   return (
     <main style={{ width: '100%', maxWidth: '800px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif', color: COLORS.text }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0.5rem 0' }}>
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0.5rem 0' }}>
         <h2 style={{ margin: 0, fontSize: '1.3rem', color: COLORS.greenDark, fontWeight: 700 }}>健康知识库</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => router.push('/library')}
             style={{
               background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
@@ -72,8 +78,10 @@ export default function KnowledgePage() {
             }}
           >
             食物库
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => router.push('/')}
             style={{
               background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
@@ -82,27 +90,41 @@ export default function KnowledgePage() {
             }}
           >
             首页
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       <section style={{ marginBottom: '3rem' }}>
-        <h2 style={{ fontSize: '1.2rem', borderLeft: `4px solid ${COLORS.green}`, paddingLeft: '0.75rem', marginBottom: '1.5rem' }}>
+        <motion.h2 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          style={{ fontSize: '1.2rem', borderLeft: `4px solid ${COLORS.green}`, paddingLeft: '0.75rem', marginBottom: '1.5rem' }}>
           IARC 致癌物分级详解
-        </h2>
-        <p style={{ fontSize: '0.95rem', lineHeight: 1.6, color: COLORS.textLight, marginBottom: '1.5rem' }}>
+        </motion.h2>
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          style={{ fontSize: '0.95rem', lineHeight: 1.6, color: COLORS.textLight, marginBottom: '1.5rem' }}>
           国际癌症研究机构（IARC）将物质的致癌风险分为四个主要等级。<strong style={{ color: COLORS.text }}>请注意：分级是基于“证据的确定性”，而不是“毒性的强弱”。</strong> 
           科学界公认的一条原则是：<strong style={{ color: COLORS.text }}>“脱离剂量谈毒性是不科学的。”</strong>
-        </p>
+        </motion.p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {IARC_LEVELS.map((item) => (
-            <div key={item.level} style={{
-              padding: '1.25rem',
-              borderRadius: '12px',
-              background: item.bgColor,
-              border: `1px solid ${item.color}33`,
-            }}>
+          {IARC_LEVELS.map((item, idx) => (
+            <motion.div 
+              key={item.level}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 + 0.3 }}
+              whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+              style={{
+                padding: '1.25rem',
+                borderRadius: '12px',
+                background: item.bgColor,
+                border: `1px solid ${item.color}33`,
+                cursor: 'default',
+              }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
                 <span style={{
                   background: item.color, color: '#fff', padding: '0.2rem 0.6rem',
@@ -120,17 +142,21 @@ export default function KnowledgePage() {
               }}>
                 💡 专家建议：{item.advice}
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
 
-      <section style={{
-        padding: '1.5rem',
-        background: COLORS.bg,
-        borderRadius: '12px',
-        border: `1px solid ${COLORS.greenLight}`,
-      }}>
+      <motion.section 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        style={{
+          padding: '1.5rem',
+          background: COLORS.bg,
+          borderRadius: '12px',
+          border: `1px solid ${COLORS.greenLight}`,
+        }}>
         <h2 style={{ fontSize: '1.1rem', margin: '0 0 1rem', color: COLORS.greenDark }}>数据来源声明</h2>
         <ul style={{ fontSize: '0.9rem', lineHeight: 1.8, color: COLORS.textLight, margin: 0, paddingLeft: '1.2rem' }}>
           <li>
@@ -149,7 +175,7 @@ export default function KnowledgePage() {
         <p style={{ fontSize: '0.8rem', color: COLORS.textLight, marginTop: '1.5rem', textAlign: 'center', fontStyle: 'italic' }}>
           * 本工具仅作为健康饮食辅助参考，不构成医疗诊断建议。如有严重健康疑问请咨询专业医生。
         </p>
-      </section>
+      </motion.section>
     </main>
   );
 }

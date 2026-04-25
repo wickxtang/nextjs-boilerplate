@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ECharts } from 'echarts';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const COLORS = {
   green: '#7ecf5f',
@@ -435,10 +436,15 @@ export default function LibraryPage() {
 
   return (
     <main style={{ width: '100%', maxWidth: '800px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0.5rem 0' }}>
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0.5rem 0' }}>
         <h1 style={{ margin: 0, fontSize: '1.3rem', color: COLORS.greenDark, fontWeight: 700 }}>{username || '食物库'}</h1>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => router.push('/knowledge')}
             style={{
               background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
@@ -447,8 +453,10 @@ export default function LibraryPage() {
             }}
           >
             知识库
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => router.push('/')}
             style={{
               background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
@@ -457,9 +465,9 @@ export default function LibraryPage() {
             }}
           >
             首页
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       <div style={{ display: 'flex', borderBottom: `1px solid ${COLORS.greenLight}`, marginBottom: '1rem' }}>
         <button onClick={() => { setTab('mine'); setEditingId(null); }} style={tabStyle(tab === 'mine')}>我的食物库</button>
@@ -467,14 +475,24 @@ export default function LibraryPage() {
         <button onClick={() => { setTab('graph'); setEditingId(null); }} style={tabStyle(tab === 'graph')}>配料图谱</button>
       </div>
 
-      {tab === 'graph' ? (
-        <div>
-          <div ref={chartRef} style={{ width: '100%', height: 'calc(100vh - 200px)', minHeight: '500px', background: '#fff', borderRadius: '10px', border: `1px solid ${COLORS.greenLight}` }} />
-          <p style={{ fontSize: '0.78rem', color: COLORS.textLight, textAlign: 'center', marginTop: '0.5rem' }}>
-            点击配料节点查看详情 · 拖拽移动节点 · 滚轮缩放
-          </p>
-        </div>
-      ) : renderListView()}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+        >
+          {tab === 'graph' ? (
+            <div>
+              <div ref={chartRef} style={{ width: '100%', height: 'calc(100vh - 200px)', minHeight: '500px', background: '#fff', borderRadius: '10px', border: `1px solid ${COLORS.greenLight}` }} />
+              <p style={{ fontSize: '0.78rem', color: COLORS.textLight, textAlign: 'center', marginTop: '0.5rem' }}>
+                点击配料节点查看详情 · 拖拽移动节点 · 滚轮缩放
+              </p>
+            </div>
+          ) : renderListView()}
+        </motion.div>
+      </AnimatePresence>
     </main>
   );
 }
