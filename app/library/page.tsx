@@ -417,7 +417,7 @@ export default function LibraryPage() {
             </p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+          <div style={{ columnCount: 2, columnGap: '1rem', width: '100%' }}>
             {filteredSnacks.map(snack => {
               const riskColor = RISK_COLORS[snack.riskLevel] || RISK_COLORS.blue;
               const isOwner = snack.userId === currentUserId;
@@ -426,7 +426,8 @@ export default function LibraryPage() {
               if (isEditing) {
                 return (
                   <div key={snack.id} style={{
-                    gridColumn: '1 / -1',
+                    breakInside: 'avoid',
+                    marginBottom: '1rem',
                     background: '#fff', borderRadius: '12px', padding: '1.25rem',
                     border: `2px solid ${COLORS.green}`, boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
                     display: 'flex', flexDirection: 'column', gap: '1rem',
@@ -542,6 +543,8 @@ export default function LibraryPage() {
                   layout
                   key={snack.id} 
                   style={{
+                    breakInside: 'avoid',
+                    marginBottom: '1rem',
                     background: '#fff', borderRadius: '12px', padding: '1rem',
                     border: `1px solid ${COLORS.greenLight}`,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
@@ -562,34 +565,31 @@ export default function LibraryPage() {
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span 
-                              title={snack.name}
-                              style={{ fontWeight: 700, fontSize: '1.05rem', color: COLORS.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                            >
-                              {snack.name}
-                            </span>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <span 
+                            title={snack.name}
+                            style={{ fontWeight: 700, fontSize: '1.05rem', color: COLORS.text, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                          >
+                            {snack.name}
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
                             <span style={{ 
-                              fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '4px', 
-                              background: COLORS.greenLight, color: COLORS.greenDark, fontWeight: 600 
+                              fontSize: '0.6rem', padding: '0.05rem 0.35rem', borderRadius: '4px', 
+                              background: COLORS.greenLight, color: COLORS.greenDark, fontWeight: 700 
                             }}>
-                              {CATEGORY_OPTIONS.find(o => o.value === (snack.category || 'snack'))?.label || snack.category || '零食/包装食品'}
+                              {CATEGORY_OPTIONS.find(o => o.value === (snack.category || 'snack'))?.label || '零食'}
+                            </span>
+                            <span style={{ fontSize: '0.75rem', color: COLORS.textLight }}>
+                              {snack.username} · {snack.recordTime}
                             </span>
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: COLORS.textLight, marginTop: '0.2rem' }}>
-                            {snack.username} · {snack.recordTime}
+                        </div>
+                        {isOwner && (
+                          <div style={{ display: 'flex', gap: '0.1rem', opacity: 0.5 }}>
+                             <button onClick={() => startEdit(snack)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1.1rem', padding: '0 4px' }} title="编辑">✎</button>
+                             <button onClick={() => handleDelete(snack.id)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1.1rem', padding: '0 4px' }} title="删除">×</button>
                           </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleCheckin(snack.id)} style={{ ...smallBtnStyle, padding: '0.25rem 0.5rem', background: COLORS.greenLight, color: COLORS.greenDark, fontWeight: 700 }}>打卡</motion.button>
-                          {isOwner && (
-                            <div style={{ position: 'relative' }}>
-                               <button onClick={() => startEdit(snack)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1.1rem', padding: '0 4px' }} title="编辑">✎</button>
-                               <button onClick={() => handleDelete(snack.id)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1.1rem', padding: '0 4px' }} title="删除">×</button>
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
 
                       {/* 营养成分展示 */}
@@ -616,9 +616,29 @@ export default function LibraryPage() {
                         </div>
                       )}
 
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.6rem' }}>
-                        {snack.ingredients.slice(0, 6).map(renderIngredientTag)}
-                        {snack.ingredients.length > 6 && <span style={{ fontSize: '0.7rem', color: COLORS.textLight, alignSelf: 'center' }}>...</span>}
+                      <div style={{ marginTop: '0.75rem' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                          {snack.ingredients.map(renderIngredientTag)}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+                        <motion.button 
+                          whileHover={{ scale: 1.05 }} 
+                          whileTap={{ scale: 0.95 }} 
+                          onClick={() => handleCheckin(snack.id)} 
+                          style={{ 
+                            ...smallBtnStyle, 
+                            padding: '0.3rem 1rem', 
+                            background: COLORS.green, 
+                            color: '#fff', 
+                            fontWeight: 700,
+                            boxShadow: '0 2px 4px rgba(126,207,95,0.15)',
+                            borderRadius: '20px'
+                          }}
+                        >
+                          打卡
+                        </motion.button>
                       </div>
                     </div>
                   </div>

@@ -192,7 +192,8 @@ export async function POST(request: NextRequest) {
       errorMessage = '内容安全审核未通过';
       suggestion = '图片或文字内容触发了 AI 的安全过滤机制，请尝试更换图片。';
     } else {
-      errorMessage = error.message || errorMessage;
+      errorMessage = errorMessage;
+      console.log(error.message);
     }
 
     return NextResponse.json({
