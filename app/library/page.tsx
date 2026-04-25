@@ -389,7 +389,12 @@ export default function LibraryPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                        <span style={{ fontWeight: 600, fontSize: '1rem', color: COLORS.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{snack.name}</span>
+                        <span 
+                          title={snack.name}
+                          style={{ fontWeight: 600, fontSize: '1rem', color: COLORS.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}
+                        >
+                          {snack.name}
+                        </span>
                       </div>
                       <div style={{ fontSize: '0.8rem', color: COLORS.textLight, marginBottom: '0.5rem' }}>
                         {snack.username} · {snack.recordTime}
