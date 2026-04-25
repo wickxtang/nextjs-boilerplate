@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Tesseract from 'tesseract.js';
+import ReactCrop, { type Crop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 const COLORS = {
   green: '#7ecf5f',
@@ -37,6 +38,9 @@ const FormUI = () => {
   const [imageBase64, setImageBase64] = useState('');
   const [ingredientsImageUrl, setIngredientsImageUrl] = useState('');
   const [ingredientsFile, setIngredientsFile] = useState<File | null>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<Crop>();
+  const imgRef = useRef<HTMLImageElement>(null);
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
 
   const [editName, setEditName] = useState('');
@@ -45,6 +49,9 @@ const FormUI = () => {
   const [newIngredient, setNewIngredient] = useState('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrStatus, setOcrStatus] = useState('');
+  const [rawOcrText, setRawOcrText] = useState('');
 
   useEffect(() => {
     fetch('/api/auth/me').then(res => {
@@ -99,31 +106,66 @@ const FormUI = () => {
     }
 
     setIsProcessing(true);
+    setOcrProgress(0);
+    setOcrStatus('正在上传图片进行 AI 解析...');
+    setRawOcrText('');
+    
     try {
-      // 1. 在客户端进行 OCR 识别
-      const { data: { text } } = await Tesseract.recognize(
-        ingredientsFile,
-        'chi_sim+eng',
-        { logger: m => console.log(m) }
-      );
+      let finalIngredientsImage: Blob = ingredientsFile;
 
-      // 2. 将 OCR 结果和食物图片发送到后端进行 AI 解析
+      // 如果有选中区域，则进行裁剪（为了让 AI 更聚焦）
+      if (imgRef.current && completedCrop && completedCrop.width > 0 && completedCrop.height > 0) {
+        const image = imgRef.current;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        if (ctx) {
+          const scaleX = image.naturalWidth / image.width;
+          const scaleY = image.naturalHeight / image.height;
+          
+          canvas.width = completedCrop.width * scaleX;
+          canvas.height = completedCrop.height * scaleY;
+
+          ctx.drawImage(
+            image, 
+            completedCrop.x * scaleX, 
+            completedCrop.y * scaleY, 
+            canvas.width, 
+            canvas.height, 
+            0, 0, canvas.width, canvas.height
+          );
+
+          finalIngredientsImage = await new Promise((resolve) => {
+            canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.9);
+          });
+        }
+      }
+
+      setOcrProgress(50);
+      setOcrStatus('AI 正在深度识别中文配料...');
+
       const formData = new FormData();
       formData.append('image', foodFile);
-      formData.append('ocrText', text);
+      formData.append('ingredientsImage', finalIngredientsImage);
 
       const response = await fetch('/api/process-records', {
         method: 'POST',
         body: formData
       });
+      
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || '请求失败');
+
       setOcrResult(data);
       setEditName(data.name || '');
       setEditRiskLevel(data.riskLevel || 'blue');
       setEditIngredients(data.ingredients || []);
+      setRawOcrText(data.ocrText || '');
       setSaveStatus('idle');
-    } catch (error) {
-      console.error('OCR or Processing failed:', error);
+      setOcrProgress(100);
+    } catch (error: any) {
+      console.error('Processing failed:', error);
+      alert(`解析失败: ${error.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -328,16 +370,43 @@ const FormUI = () => {
 
           {/* 右侧：配料表图片 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <span style={{ fontSize: '0.9rem', color: COLORS.text, fontWeight: 600 }}>2. 上传配料表图 (OCR)</span>
+            <span style={{ fontSize: '0.9rem', color: COLORS.text, fontWeight: 600 }}>2. 上传配料表图 (可拖拽选中区域)</span>
             {ingredientsImageUrl && (
               <div style={{
                 borderRadius: '8px',
                 overflow: 'hidden',
                 border: `2px solid ${COLORS.greenLight}`,
                 boxShadow: '0 2px 8px rgba(126,207,95,0.2)',
-                aspectRatio: '1/1',
+                background: '#eee',
+                position: 'relative',
               }}>
-                <img src={ingredientsImageUrl} alt="配料表预览" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <ReactCrop
+                  crop={crop}
+                  onChange={c => setCrop(c)}
+                  onComplete={c => setCompletedCrop(c)}
+                >
+                  <img
+                    ref={imgRef}
+                    src={ingredientsImageUrl}
+                    alt="配料表预览"
+                    style={{ width: '100%', display: 'block' }}
+                  />
+                </ReactCrop>
+                {(!completedCrop || completedCrop.width === 0) && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '10px',
+                    left: '10px',
+                    background: 'rgba(0,0,0,0.6)',
+                    color: '#fff',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    pointerEvents: 'none',
+                  }}>
+                    提示：在图上拖拽选中配料表区域识别更精准
+                  </div>
+                )}
               </div>
             )}
             <label
@@ -384,6 +453,8 @@ const FormUI = () => {
             cursor: (isProcessing || !imageUrl || !ingredientsImageUrl) ? 'not-allowed' : 'pointer',
             transition: 'background 0.2s',
             opacity: (isProcessing || !imageUrl || !ingredientsImageUrl) ? 0.6 : 1,
+            position: 'relative',
+            overflow: 'hidden',
           }}
           onMouseEnter={(e) => {
             if (!isProcessing && imageUrl && ingredientsImageUrl) {
@@ -396,8 +467,67 @@ const FormUI = () => {
             }
           }}
         >
-          {isProcessing ? '正在 OCR 识别中...' : '开始智能解析'}
+          {isProcessing && (
+            <div style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              height: '100%',
+              width: `${ocrProgress}%`,
+              background: 'rgba(255,255,255,0.2)',
+              transition: 'width 0.3s ease',
+            }} />
+          )}
+          <span style={{ position: 'relative', zIndex: 1 }}>
+            {isProcessing ? ocrStatus : '开始智能解析'}
+          </span>
         </button>
+
+        {isProcessing && (
+          <div style={{
+            fontSize: '0.8rem',
+            color: COLORS.textLight,
+            textAlign: 'center',
+            marginTop: '-0.5rem',
+          }}>
+            识别过程可能需要 10-20 秒，请耐心等待...
+          </div>
+        )}
+
+        {rawOcrText && (
+          <div style={{
+            marginTop: '0.5rem',
+            padding: '1rem',
+            background: '#f8f9fa',
+            borderRadius: '8px',
+            border: `1px solid #ddd`,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: COLORS.text }}>OCR 识别结果原文：</span>
+              <button 
+                type="button" 
+                onClick={() => setRawOcrText('')}
+                style={{ background: 'none', border: 'none', color: COLORS.textLight, cursor: 'pointer', fontSize: '0.75rem' }}
+              >
+                收起
+              </button>
+            </div>
+            <textarea
+              readOnly
+              value={rawOcrText}
+              style={{
+                width: '100%',
+                height: '80px',
+                fontSize: '0.85rem',
+                border: 'none',
+                background: 'transparent',
+                color: COLORS.textLight,
+                resize: 'none',
+                outline: 'none',
+              }}
+            />
+          </div>
+        )}
 
         {ocrResult && (
           <div style={{
@@ -431,27 +561,33 @@ const FormUI = () => {
 
             <div style={{ borderTop: `1px solid ${COLORS.greenLight}`, paddingTop: '0.75rem' }}>
               <span style={{ fontWeight: 600, color: COLORS.text, fontSize: '0.9rem' }}>成分列表</span>
-              <ul style={{
-                margin: '0.5rem 0 0',
-                padding: '0 0 0 1.25rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.3rem',
-              }}>
-                {ocrResult.ingredients.map((ingredient) => (
-                  <li key={ingredient} style={{
-                    color: COLORS.textLight,
-                    fontSize: '0.9rem',
-                    listStyle: 'none',
-                    padding: '0.35rem 0.75rem',
-                    background: COLORS.bg,
-                    borderRadius: '6px',
-                    border: `1px solid ${COLORS.greenLight}`,
-                  }}>
-                    {ingredient}
-                  </li>
-                ))}
-              </ul>
+              {ocrResult.ingredients.length > 0 ? (
+                <ul style={{
+                  margin: '0.5rem 0 0',
+                  padding: '0 0 0 1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.3rem',
+                }}>
+                  {ocrResult.ingredients.map((ingredient) => (
+                    <li key={ingredient} style={{
+                      color: COLORS.textLight,
+                      fontSize: '0.9rem',
+                      listStyle: 'none',
+                      padding: '0.35rem 0.75rem',
+                      background: COLORS.bg,
+                      borderRadius: '6px',
+                      border: `1px solid ${COLORS.greenLight}`,
+                    }}>
+                      {ingredient}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={{ fontSize: '0.85rem', color: COLORS.textLight, fontStyle: 'italic', marginTop: '0.5rem' }}>
+                  未识别出高风险成分，请检查 OCR 文本并手动添加。
+                </p>
+              )}
             </div>
           </div>
         )}

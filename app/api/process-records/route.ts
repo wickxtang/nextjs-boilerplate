@@ -1,41 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// 模拟AI配料解析（实际项目中应调用DeepSeek/OpenAI API）
-function mockParseIngredients(ocrText: string) {
-  // 简单解析：假设OCR文本包含配料表，这里模拟返回结构化数据
+// 请在 .env 中设置 GEMINI_API_KEY
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+// 模拟AI配料解析（用于补充 Gemini 结果中的详细信息）
+function getIngredientDetails(ingredientNames: string[]) {
   const sampleIngredients = [
     { name: '阿斯巴甜', standardName: '阿斯巴甜', aliases: ['甜味素', 'E951'], iarcLevel: '2B', description: '人工合成甜味剂，2B类致癌物（可能对人类致癌）' },
     { name: '柠檬酸', standardName: '柠檬酸', aliases: ['E330'], iarcLevel: '3', description: '天然存在于柑橘类水果中，安全' },
     { name: '苯甲酸钠', standardName: '苯甲酸钠', aliases: ['E211'], iarcLevel: '3', description: '常用防腐剂，在规定剂量内安全' },
   ];
 
-  // 根据OCR文本简单匹配（演示用）
-  const foundIngredients = sampleIngredients.filter(ing =>
-    ocrText.toLowerCase().includes(ing.name.toLowerCase()) ||
-    ocrText.toLowerCase().includes(ing.standardName.toLowerCase())
+  const details = sampleIngredients.filter(ing => 
+    ingredientNames.some(name => name.includes(ing.name) || ing.name.includes(name))
   );
 
-  // 如果没有匹配，不返回默认示例，而是由 LLM 或 OCR 文本决定
-  const ingredients = foundIngredients;
-
-  // 风险评级
-  const riskLevel = ingredients.some(i => i.iarcLevel === '1') ? 'red' :
-                   ingredients.some(i => i.iarcLevel === '2A' || i.iarcLevel === '2B') ? 'yellow' : 'blue';
+  const riskLevel = details.some(i => i.iarcLevel === '1') ? 'red' :
+                   details.some(i => i.iarcLevel === '2A' || i.iarcLevel === '2B') ? 'yellow' : 'blue';
 
   const riskLabel = riskLevel === 'red' ? '高风险' : riskLevel === 'yellow' ? '中风险' : '低风险';
 
-  const ingredientNames = ingredients.map(i => i.standardName);
-
   return {
-    name: '识别结果',
-    ingredients: ingredientNames,
-    ingredientDetails: ingredients,
+    ingredientDetails: details,
     riskLevel,
     riskLabel,
-    interpretation: ingredientNames.length > 0 
-      ? `含有${ingredientNames.join('、')}。${ingredients.some(i => i.iarcLevel === '2B') ? '含2B类致癌物，符合国标添加量。' : '配料相对安全。'}`
-      : '未识别出高风险成分，请核对配料表。',
-    recordTime: new Date().toISOString().split('T')[0]
   };
 }
 
@@ -43,25 +32,72 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const imageFile = formData.get('image') as File;
-    const ocrText = formData.get('ocrText') as string;
+    const ingredientsImageFile = formData.get('ingredientsImage') as File;
 
-    if (!imageFile || !ocrText) {
-      return NextResponse.json({ error: '请提供食物图片和 OCR 识别文本' }, { status: 400 });
+    if (!imageFile || !ingredientsImageFile) {
+      return NextResponse.json({ error: '请提供图片' }, { status: 400 });
     }
 
-    console.log('接收到客户端 OCR 结果，开始直接匹配分析...');
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json({ error: '未配置 GEMINI_API_KEY，请在 .env 中设置' }, { status: 500 });
+    }
 
-    // 直接结合 OCR 文本进行解析匹配，不再调用 DeepSeek
-    const parsedData = mockParseIngredients(ocrText);
+    // 将图片转换为 Gemini 需要的格式
+    const imageBuffer = await ingredientsImageFile.arrayBuffer();
+    const imageParts = [
+      {
+        inlineData: {
+          data: Buffer.from(imageBuffer).toString('base64'),
+          mimeType: ingredientsImageFile.type,
+        },
+      },
+    ];
+
+    // 调用 Gemini 1.5 Flash
+    // 强制使用最新的 gemini-1.5-flash 完整名称
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-flash-latest" 
+    });
+    const prompt = `你是一个专业的食品配料表分析专家。请识别图片中的配料表文字，并提取出所有的配料名称。
+    注意：
+    1. 仅提取配料名称，去除含量百分比。
+    2. 如果图片中有干扰文字，请忽略，只关注配料表部分。
+    3. 返回 JSON 格式：{"ingredients": ["配料1", "配料2", ...], "ocrText": "识别到的原始完整文本"}
+    4. 必须只返回 JSON，不要有其他解释说明。`;
+
+    const result = await model.generateContent([prompt, ...imageParts]);
+    const response = await result.response;
+    const text = response.text();
+    
+    // 解析 JSON
+    let parsedResult = { ingredients: [], ocrText: '' };
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedResult = JSON.parse(jsonMatch[0]);
+      }
+    } catch (e) {
+      console.error('Gemini 返回解析失败:', text);
+      return NextResponse.json({ error: 'AI 解析返回格式错误' }, { status: 500 });
+    }
+
+    // 结合本地风险库进行分析
+    const analysis = getIngredientDetails(parsedResult.ingredients);
 
     return NextResponse.json({
       success: true,
-      ocrText: ocrText.substring(0, 500),
-      ...parsedData,
+      name: '识别结果',
+      ingredients: parsedResult.ingredients,
+      ocrText: parsedResult.ocrText,
+      interpretation: parsedResult.ingredients.length > 0 
+        ? `Gemini 识别到 ${parsedResult.ingredients.length} 种配料。${analysis.riskLevel === 'yellow' ? '发现潜在风险成分，建议核对。' : '成分相对安全。'}`
+        : '未能识别出明确的配料，请尝试重新框选或拍照。',
+      ...analysis,
+      recordTime: new Date().toISOString().split('T')[0]
     });
 
   } catch (error) {
-    console.error('处理失败:', error);
-    return NextResponse.json({ error: '处理请求时出错' }, { status: 500 });
+    console.error('Gemini 处理失败:', error);
+    return NextResponse.json({ error: 'AI 处理请求时出错' }, { status: 500 });
   }
 }
