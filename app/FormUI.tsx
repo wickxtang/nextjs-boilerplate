@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Tesseract from 'tesseract.js';
 
 const COLORS = {
   green: '#7ecf5f',
@@ -34,6 +35,8 @@ const FormUI = () => {
   const [authChecked, setAuthChecked] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [imageBase64, setImageBase64] = useState('');
+  const [ingredientsImageUrl, setIngredientsImageUrl] = useState('');
+  const [ingredientsFile, setIngredientsFile] = useState<File | null>(null);
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
 
   const [editName, setEditName] = useState('');
@@ -41,6 +44,7 @@ const FormUI = () => {
   const [editIngredients, setEditIngredients] = useState<string[]>([]);
   const [newIngredient, setNewIngredient] = useState('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/me').then(res => {
@@ -78,10 +82,36 @@ const FormUI = () => {
     }
   };
 
+  const handleIngredientsFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIngredientsImageUrl(URL.createObjectURL(file));
+      setIngredientsFile(file);
+    }
+  };
+
   const handleImageSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    const foodFile = fileInputRef.current?.files?.[0];
+    if (!foodFile || !ingredientsFile) {
+      alert('请确保两张图片都已上传');
+      return;
+    }
+
+    setIsProcessing(true);
     try {
+      // 1. 在客户端进行 OCR 识别
+      const { data: { text } } = await Tesseract.recognize(
+        ingredientsFile,
+        'chi_sim+eng',
+        { logger: m => console.log(m) }
+      );
+
+      // 2. 将 OCR 结果和食物图片发送到后端进行 AI 解析
+      const formData = new FormData();
+      formData.append('image', foodFile);
+      formData.append('ocrText', text);
+
       const response = await fetch('/api/process-records', {
         method: 'POST',
         body: formData
@@ -93,7 +123,9 @@ const FormUI = () => {
       setEditIngredients(data.ingredients || []);
       setSaveStatus('idle');
     } catch (error) {
-      console.error('OCR failed:', error);
+      console.error('OCR or Processing failed:', error);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -101,6 +133,19 @@ const FormUI = () => {
     const trimmed = newIngredient.trim();
     if (trimmed && !editIngredients.includes(trimmed)) {
       setEditIngredients([...editIngredients, trimmed]);
+      setNewIngredient('');
+    }
+  };
+
+  const splitAndAddIngredients = () => {
+    if (!newIngredient.trim()) return;
+    
+    // 替换所有句号（中英文）为空，然后按“、”或逗号分割
+    const cleaned = newIngredient.replace(/[。.]/g, '');
+    const items = cleaned.split(/[、,]/).map(item => item.trim()).filter(item => item && !editIngredients.includes(item));
+    
+    if (items.length > 0) {
+      setEditIngredients([...editIngredients, ...items]);
       setNewIngredient('');
     }
   };
@@ -113,6 +158,7 @@ const FormUI = () => {
     setOcrResult(null);
     setImageUrl('');
     setImageBase64('');
+    setIngredientsImageUrl('');
     setEditName('');
     setEditRiskLevel('blue');
     setEditIngredients([]);
@@ -235,51 +281,98 @@ const FormUI = () => {
           AI 健康食品成分助手
         </h1>
 
-        {imageUrl && (
-          <div style={{
-            borderRadius: '8px',
-            overflow: 'hidden',
-            border: `2px solid ${COLORS.greenLight}`,
-            boxShadow: '0 2px 8px rgba(126,207,95,0.2)',
-          }}>
-            <img src={imageUrl} alt="预览" style={{ width: '100%', display: 'block' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          {/* 左侧：食物图片 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <span style={{ fontSize: '0.9rem', color: COLORS.text, fontWeight: 600 }}>1. 上传食物正面图</span>
+            {imageUrl && (
+              <div style={{
+                borderRadius: '8px',
+                overflow: 'hidden',
+                border: `2px solid ${COLORS.greenLight}`,
+                boxShadow: '0 2px 8px rgba(126,207,95,0.2)',
+                aspectRatio: '1/1',
+              }}>
+                <img src={imageUrl} alt="预览" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              </div>
+            )}
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                padding: imageUrl ? '0.6rem' : '1.5rem',
+                borderRadius: '8px',
+                border: `2px dashed ${COLORS.green}`,
+                background: '#fff',
+                cursor: 'pointer',
+                color: COLORS.textLight,
+                fontSize: '0.8rem',
+                textAlign: 'center',
+              }}
+            >
+              <span>📷 {imageUrl ? '更换食物图' : '点击上传'}</span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                name="image"
+                required
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+            </label>
           </div>
-        )}
 
-        <label
-          style={{
-            display: 'flex',
-            flexDirection: imageUrl ? 'row' as const : 'column' as const,
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: imageUrl ? '0.4rem' : '0.5rem',
-            padding: imageUrl ? '0.6rem 1rem' : '2rem 1rem',
-            borderRadius: '8px',
-            border: `2px dashed ${COLORS.green}`,
-            background: '#fff',
-            cursor: 'pointer',
-            transition: 'border-color 0.2s, padding 0.2s',
-            color: COLORS.textLight,
-            fontSize: imageUrl ? '0.8rem' : '0.9rem',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = COLORS.greenDark)}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = COLORS.green)}
-        >
-          <span style={{ fontSize: imageUrl ? '1rem' : '2rem' }}>📷</span>
-          <span>{imageUrl ? '更换图片' : '点击或拖拽上传食品图片'}</span>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            name="image"
-            required
-            onChange={handleFileChange}
-            style={{ display: 'none' }}
-          />
-        </label>
+          {/* 右侧：配料表图片 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <span style={{ fontSize: '0.9rem', color: COLORS.text, fontWeight: 600 }}>2. 上传配料表图 (OCR)</span>
+            {ingredientsImageUrl && (
+              <div style={{
+                borderRadius: '8px',
+                overflow: 'hidden',
+                border: `2px solid ${COLORS.greenLight}`,
+                boxShadow: '0 2px 8px rgba(126,207,95,0.2)',
+                aspectRatio: '1/1',
+              }}>
+                <img src={ingredientsImageUrl} alt="配料表预览" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              </div>
+            )}
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                padding: ingredientsImageUrl ? '0.6rem' : '1.5rem',
+                borderRadius: '8px',
+                border: `2px dashed ${COLORS.green}`,
+                background: '#fff',
+                cursor: 'pointer',
+                color: COLORS.textLight,
+                fontSize: '0.8rem',
+                textAlign: 'center',
+              }}
+            >
+              <span>📄 {ingredientsImageUrl ? '更换配料表' : '点击上传'}</span>
+              <input
+                type="file"
+                accept="image/*"
+                name="ingredientsImage"
+                required
+                onChange={handleIngredientsFileChange}
+                style={{ display: 'none' }}
+              />
+            </label>
+          </div>
+        </div>
 
         <button
           type="submit"
+          disabled={isProcessing || !imageUrl || !ingredientsImageUrl}
           style={{
             padding: '0.75rem 1.5rem',
             background: COLORS.green,
@@ -288,13 +381,22 @@ const FormUI = () => {
             borderRadius: '8px',
             fontSize: '1rem',
             fontWeight: 600,
-            cursor: 'pointer',
+            cursor: (isProcessing || !imageUrl || !ingredientsImageUrl) ? 'not-allowed' : 'pointer',
             transition: 'background 0.2s',
+            opacity: (isProcessing || !imageUrl || !ingredientsImageUrl) ? 0.6 : 1,
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = COLORS.greenDark)}
-          onMouseLeave={(e) => (e.currentTarget.style.background = COLORS.green)}
+          onMouseEnter={(e) => {
+            if (!isProcessing && imageUrl && ingredientsImageUrl) {
+              e.currentTarget.style.background = COLORS.greenDark;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isProcessing && imageUrl && ingredientsImageUrl) {
+              e.currentTarget.style.background = COLORS.green;
+            }
+          }}
         >
-          提交解析
+          {isProcessing ? '正在 OCR 识别中...' : '开始智能解析'}
         </button>
 
         {ocrResult && (
@@ -431,11 +533,24 @@ const FormUI = () => {
                 value={newIngredient}
                 onChange={(e) => setNewIngredient(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addIngredient(); } }}
-                placeholder="输入配料名称"
+                placeholder="输入配料，如“水、白砂糖、柠檬酸”"
                 style={inputStyle}
               />
               <button type="button" onClick={addIngredient} style={smallBtnStyle}>
                 添加
+              </button>
+              <button 
+                type="button" 
+                onClick={splitAndAddIngredients} 
+                style={{
+                  ...smallBtnStyle,
+                  background: COLORS.yellow,
+                  color: COLORS.text,
+                  fontWeight: 600
+                }}
+                title="按“、”自动分割并去句号"
+              >
+                智能分割
               </button>
             </div>
           </div>
