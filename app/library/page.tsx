@@ -65,6 +65,7 @@ export default function LibraryPage() {
   const [tab, setTab] = useState<'mine' | 'all' | 'graph'>('mine');
   const [snacks, setSnacks] = useState<Snack[]>([]);
   const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState('');
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editState, setEditState] = useState<EditState>({ name: '', riskLevel: 'blue', ingredients: [], newIngredient: '', imageData: null, imageChanged: false });
@@ -77,7 +78,10 @@ export default function LibraryPage() {
       if (!res.ok) { router.replace('/login'); return; }
       return res.json();
     }).then(data => {
-      if (data?.userId) setCurrentUserId(data.userId);
+      if (data?.userId) {
+        setCurrentUserId(data.userId);
+        setUsername(data.username);
+      }
     });
   }, [router]);
 
@@ -430,28 +434,29 @@ export default function LibraryPage() {
   };
 
   return (
-    <main style={{ width: '100%', maxWidth: '720px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h1 style={{ margin: 0, fontSize: '1.3rem', color: COLORS.greenDark }}>食物库</h1>
+    <main style={{ width: '100%', maxWidth: '800px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0.5rem 0' }}>
+        <h1 style={{ margin: 0, fontSize: '1.3rem', color: COLORS.greenDark, fontWeight: 700 }}>{username || '食物库'}</h1>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button
             onClick={() => router.push('/knowledge')}
             style={{
               background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
-              padding: '0.3rem 0.75rem', fontSize: '0.8rem', color: COLORS.greenDark, cursor: 'pointer',
+              padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.greenDark, cursor: 'pointer',
               fontWeight: 600,
             }}
           >
-            健康知识
+            知识库
           </button>
           <button
             onClick={() => router.push('/')}
             style={{
               background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
-              padding: '0.3rem 0.75rem', fontSize: '0.8rem', color: COLORS.textLight, cursor: 'pointer',
+              padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.text, cursor: 'pointer',
+              fontWeight: 600,
             }}
           >
-            返回首页
+            首页
           </button>
         </div>
       </div>

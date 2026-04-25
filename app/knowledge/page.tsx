@@ -59,18 +59,31 @@ export default function KnowledgePage() {
   const router = useRouter();
 
   return (
-    <main style={{ width: '100%', maxWidth: '800px', margin: '0 auto', padding: '2rem', fontFamily: 'system-ui, sans-serif', color: COLORS.text }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem', color: COLORS.greenDark }}>健康知识库</h1>
-        <button
-          onClick={() => router.push('/')}
-          style={{
-            background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
-            padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.textLight, cursor: 'pointer',
-          }}
-        >
-          返回首页
-        </button>
+    <main style={{ width: '100%', maxWidth: '800px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif', color: COLORS.text }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0.5rem 0' }}>
+        <h2 style={{ margin: 0, fontSize: '1.3rem', color: COLORS.greenDark, fontWeight: 700 }}>健康知识库</h2>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={() => router.push('/library')}
+            style={{
+              background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
+              padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.text, cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            食物库
+          </button>
+          <button
+            onClick={() => router.push('/')}
+            style={{
+              background: 'none', border: `1px solid ${COLORS.greenLight}`, borderRadius: '6px',
+              padding: '0.4rem 1rem', fontSize: '0.9rem', color: COLORS.text, cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            首页
+          </button>
+        </div>
       </div>
 
       <section style={{ marginBottom: '3rem' }}>

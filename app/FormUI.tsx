@@ -52,6 +52,7 @@ const FormUI = () => {
   const [ocrProgress, setOcrProgress] = useState(0);
   const [ocrStatus, setOcrStatus] = useState('');
   const [rawOcrText, setRawOcrText] = useState('');
+  const [copySuccess, setCopyStatus] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/me').then(res => {
@@ -236,6 +237,16 @@ const FormUI = () => {
     }
   };
 
+  const handleCopyOcr = async () => {
+    try {
+      await navigator.clipboard.writeText(rawOcrText);
+      setCopyStatus(true);
+      setTimeout(() => setCopyStatus(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy!', err);
+    }
+  };
+
   const inputStyle: React.CSSProperties = {
     padding: '0.5rem 0.75rem',
     borderRadius: '6px',
@@ -262,7 +273,7 @@ const FormUI = () => {
   }
 
   return (
-    <div style={{ width: '100%', fontFamily: 'system-ui, sans-serif' }}>
+    <main style={{ width: '100%', maxWidth: '800px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -270,10 +281,9 @@ const FormUI = () => {
         marginBottom: '1rem',
         padding: '0.5rem 0',
       }}>
-        <span style={{ fontSize: '1.1rem', color: COLORS.text, fontWeight: 600 }}>
-          {username}
-        </span>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <h1 style={{ margin: 0, fontSize: '1.3rem', color: COLORS.greenDark, fontWeight: 700 }}>AI 食品助手</h1>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.85rem', color: COLORS.textLight, marginRight: '0.5rem' }}>Hi, {username}</span>
           <button
             type="button"
             onClick={() => router.push('/knowledge')}
@@ -282,7 +292,7 @@ const FormUI = () => {
               border: `1px solid ${COLORS.greenLight}`,
               borderRadius: '6px',
               padding: '0.4rem 1rem',
-              fontSize: '0.95rem',
+              fontSize: '0.9rem',
               cursor: 'pointer',
               fontWeight: 600,
               color: COLORS.greenDark,
@@ -298,9 +308,10 @@ const FormUI = () => {
               border: `1px solid ${COLORS.greenLight}`,
               borderRadius: '6px',
               padding: '0.4rem 1rem',
-              fontSize: '0.95rem',
+              fontSize: '0.9rem',
               cursor: 'pointer',
               fontWeight: 600,
+              color: COLORS.text,
             }}
           >
             食物库
@@ -313,31 +324,37 @@ const FormUI = () => {
               border: `1px solid ${COLORS.greenLight}`,
               borderRadius: '6px',
               padding: '0.4rem 1rem',
-              fontSize: '0.95rem',
+              fontSize: '0.9rem',
               color: COLORS.textLight,
               cursor: 'pointer',
             }}
           >
-            退出登录
+            退出
           </button>
         </div>
       </div>
-      <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+      <div style={{ width: '100%' }}>
       <form
         onSubmit={handleImageSubmit}
         style={{
-          background: COLORS.bg,
-          borderRadius: '12px',
-          padding: '2rem',
-          border: `2px solid ${COLORS.greenLight}`,
+          background: '#fff',
+          borderRadius: '16px',
+          padding: '2.5rem',
+          border: `1px solid ${COLORS.greenLight}`,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '1.25rem',
+          gap: '1.5rem',
         }}
       >
-        <h1 style={{ margin: 0, fontSize: '1.8rem', color: COLORS.greenDark, textAlign: 'center' }}>
-          AI 健康食品成分助手
-        </h1>
+        <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
+          <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.8rem', color: COLORS.greenDark }}>
+            智能识别配料表
+          </h2>
+          <p style={{ margin: 0, color: COLORS.textLight, fontSize: '0.95rem' }}>
+            上传图片，AI 助您解析成分风险
+          </p>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           {/* 左侧：食物图片 */}
@@ -522,10 +539,20 @@ const FormUI = () => {
               <span style={{ fontSize: '0.85rem', fontWeight: 600, color: COLORS.text }}>OCR 识别结果原文：</span>
               <button 
                 type="button" 
-                onClick={() => setRawOcrText('')}
-                style={{ background: 'none', border: 'none', color: COLORS.textLight, cursor: 'pointer', fontSize: '0.75rem' }}
+                onClick={handleCopyOcr}
+                style={{ 
+                  background: copySuccess ? COLORS.green : 'none', 
+                  border: copySuccess ? 'none' : `1px solid ${COLORS.greenLight}`, 
+                  color: copySuccess ? '#fff' : COLORS.greenDark, 
+                  cursor: 'pointer', 
+                  fontSize: '0.75rem',
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: '4px',
+                  fontWeight: 600,
+                  transition: 'all 0.2s'
+                }}
               >
-                收起
+                {copySuccess ? '已复制！' : '一键复制'}
               </button>
             </div>
             <textarea
@@ -732,7 +759,7 @@ const FormUI = () => {
         </div>
       )}
       </div>
-    </div>
+    </main>
   );
 };
 
