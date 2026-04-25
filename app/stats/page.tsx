@@ -34,6 +34,7 @@ export default function StatsPage() {
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [allSnacks, setAllSnacks] = useState<{id: number, name: string}[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [activeStartDate, setActiveStartDate] = useState<Date | null>(new Date());
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
   const [selectedSnackId, setSelectedSnackId] = useState<string>('');
@@ -84,6 +85,21 @@ export default function StatsPage() {
       alert('发生错误');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const deleteCheckin = async (id: number) => {
+    if (!confirm('确定要删除这条打卡记录吗？')) return;
+    try {
+      const res = await fetch(`/api/checkins?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await fetchCheckins();
+      } else {
+        alert('删除失败');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('发生错误');
     }
   };
 
@@ -151,8 +167,95 @@ export default function StatsPage() {
     <main style={{ width: '100%', maxWidth: '800px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif', color: COLORS.text }}>
       <style>{`
         .react-calendar { border: none; border-radius: 12px; background: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05); width: 100%; padding: 1rem; }
-        .has-record { background: ${COLORS.greenLight} !important; border-radius: 50%; color: ${COLORS.greenDark} !important; font-weight: bold; }
-        .react-calendar__tile--active { background: ${COLORS.green} !important; border-radius: 50%; }
+        
+        /* 统一所有格子的基础样式 */
+        .react-calendar__tile { 
+          height: 48px; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          background: none !important; /* 禁用默认背景，全部改用伪元素实现圆形 */
+          position: relative;
+          z-index: 1;
+          margin: 2px 0;
+          transition: all 0.2s;
+          border: none !important;
+        }
+
+        /* 通用圆形底色容器 */
+        .react-calendar__tile::before {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          z-index: -1;
+          transition: all 0.2s;
+        }
+
+        /* 悬浮效果 - 灰色圆形 */
+        .react-calendar__tile:enabled:hover::before {
+          background: #f0f0f0;
+        }
+
+        /* 有打卡记录的状态 - 绿色圆形 */
+        .has-record::before {
+          background: ${COLORS.greenLight};
+        }
+        .has-record abbr { 
+          color: ${COLORS.greenDark} !important; 
+          font-weight: bold; 
+        }
+
+        /* 今天 - 调得更淡的橙色圆形 */
+        .react-calendar__tile--now::before {
+          background: #fff8e1 !important; /* 更淡更柔和的橙色 */
+          border: 1px solid #ffe082; /* 增加一个极细的边框以便区分 */
+        }
+        .react-calendar__tile--now abbr { 
+          color: #f57c00 !important; 
+          font-weight: bold; 
+        }
+
+        /* 选中状态 - 绿色实心圆形 */
+        .react-calendar__tile--active::before {
+          background: ${COLORS.green} !important;
+        }
+        .react-calendar__tile--active abbr { 
+          color: #fff !important; 
+        }
+
+        /* 修复邻近月份（非当前月）的文字颜色 */
+        .react-calendar__month-view__days__day--neighboringMonth {
+          color: #d1d1d1 !important;
+        }
+        
+        /* 邻近月份悬浮也是圆形 */
+        .react-calendar__month-view__days__day--neighboringMonth:enabled:hover::before {
+          background: #f5f5f5;
+        }
+
+        /* 禁用默认的 focus 效果 */
+        .react-calendar__tile:enabled:focus::before {
+          background: #e8e8e8;
+        }
+
+        .react-calendar__navigation button {
+          min-width: 44px;
+          background: none;
+          font-size: 1rem;
+          margin-top: 8px;
+          color: ${COLORS.greenDark};
+          font-weight: 600;
+        }
+        .react-calendar__navigation button:enabled:hover,
+        .react-calendar__navigation button:enabled:focus {
+          background-color: ${COLORS.greenLight};
+          border-radius: 8px;
+        }
       `}</style>
 
       <motion.div 
@@ -168,11 +271,36 @@ export default function StatsPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
         <section>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: COLORS.greenDark }}>食用日历</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1.1rem', margin: 0, color: COLORS.greenDark }}>食用日历</h2>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                const now = new Date();
+                setSelectedDate(now);
+                setActiveStartDate(now);
+              }}
+              style={{
+                background: COLORS.greenLight,
+                border: 'none',
+                borderRadius: '15px',
+                padding: '0.2rem 0.75rem',
+                fontSize: '0.75rem',
+                color: COLORS.greenDark,
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              返回今天
+            </motion.button>
+          </div>
           <Calendar 
             onChange={(val) => setSelectedDate(val as Date)} 
             value={selectedDate}
             tileClassName={tileClassName}
+            activeStartDate={activeStartDate || undefined}
+            onActiveStartDateChange={({ activeStartDate: newActiveStartDate }) => setActiveStartDate(newActiveStartDate)}
           />
           <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
             <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.75rem', color: COLORS.greenDark }}>补录零食 ({selectedDate.toLocaleDateString()})</h3>
@@ -220,7 +348,26 @@ export default function StatsPage() {
             {dayRecords.length > 0 ? (
               <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.85rem', color: COLORS.textLight }}>
                 {dayRecords.map(r => (
-                  <li key={r.id} style={{ marginBottom: '0.2rem' }}>{r.name}</li>
+                  <li key={r.id} style={{ marginBottom: '0.4rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{r.name}</span>
+                      <button 
+                        onClick={() => deleteCheckin(r.id)}
+                        style={{ 
+                          background: 'none', 
+                          border: 'none', 
+                          color: '#ccc', 
+                          cursor: 'pointer', 
+                          fontSize: '0.75rem',
+                          padding: '2px 4px'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = COLORS.red)}
+                        onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </li>
                 ))}
               </ul>
             ) : <p style={{ fontSize: '0.85rem', color: COLORS.textLight, margin: 0 }}>当天没有记录</p>}

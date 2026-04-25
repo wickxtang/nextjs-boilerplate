@@ -73,3 +73,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '打卡请求处理失败' }, { status: 500 });
   }
 }
+
+// 删除打卡记录
+export async function DELETE(request: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: '请先登录' }, { status: 401 });
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: '未提供记录ID' }, { status: 400 });
+
+    await execute(
+      `DELETE FROM checkins WHERE id = ? AND user_id = ?`,
+      [parseInt(id), user.userId]
+    );
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('删除打卡失败:', error);
+    return NextResponse.json({ error: '删除记录失败' }, { status: 500 });
+  }
+}
