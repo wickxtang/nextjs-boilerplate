@@ -9,15 +9,40 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { name, ingredients, riskLevel, riskLabel, interpretation, imageData } = body;
+  const { 
+    name, 
+    category,
+    ingredients, 
+    riskLevel, 
+    riskLabel, 
+    interpretation, 
+    imageData,
+    nutrition 
+  } = body;
 
   if (!name || !Array.isArray(ingredients)) {
     return NextResponse.json({ error: '缺少必填字段' }, { status: 400 });
   }
 
   const snackResult = await execute(
-    `INSERT INTO snacks (user_id, name, risk_level, risk_label, interpretation, image_data, record_time) VALUES (?, ?, ?, ?, ?, ?, date('now'))`,
-    [user.userId, name, riskLevel || null, riskLabel || null, interpretation || null, imageData || null]
+    `INSERT INTO snacks (
+      user_id, name, category, risk_level, risk_label, interpretation, image_data, 
+      energy_kj, protein_g, fat_g, carbohydrate_g, sodium_mg, record_time
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, date('now'))`,
+    [
+      user.userId, 
+      name, 
+      category || 'snack',
+      riskLevel || null, 
+      riskLabel || null, 
+      interpretation || null, 
+      imageData || null,
+      nutrition?.energy_kj || null,
+      nutrition?.protein_g || null,
+      nutrition?.fat_g || null,
+      nutrition?.carbohydrate_g || null,
+      nutrition?.sodium_mg || null
+    ]
   );
   const snackId = Number(snackResult.lastInsertRowid);
 

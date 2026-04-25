@@ -19,10 +19,16 @@ export async function GET(request: NextRequest) {
     id: number;
     user_id: number;
     name: string;
+    category: string;
     risk_level: string;
     risk_label: string;
     interpretation: string;
     image_data: string | null;
+    energy_kj: number | null;
+    protein_g: number | null;
+    fat_g: number | null;
+    carbohydrate_g: number | null;
+    sodium_mg: number | null;
     record_time: string;
     created_at: string;
     username: string;
@@ -48,10 +54,18 @@ export async function GET(request: NextRequest) {
     id: s.id,
     userId: s.user_id,
     name: s.name,
+    category: s.category,
     riskLevel: s.risk_level,
     riskLabel: s.risk_label,
     interpretation: s.interpretation,
     imageData: s.image_data,
+    nutrition: {
+      energy_kj: s.energy_kj,
+      protein_g: s.protein_g,
+      fat_g: s.fat_g,
+      carbohydrate_g: s.carbohydrate_g,
+      sodium_mg: s.sodium_mg,
+    },
     recordTime: s.record_time,
     createdAt: s.created_at,
     username: s.username,

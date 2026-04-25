@@ -35,6 +35,7 @@ interface Snack {
   id: number;
   userId: number;
   name: string;
+  category: string;
   riskLevel: string;
   riskLabel: string;
   interpretation: string;
@@ -42,15 +43,30 @@ interface Snack {
   recordTime: string;
   username: string;
   ingredients: string[];
+  nutrition: {
+    energy_kj: number | null;
+    protein_g: number | null;
+    fat_g: number | null;
+    carbohydrate_g: number | null;
+    sodium_mg: number | null;
+  };
 }
 
 interface EditState {
   name: string;
+  category: string;
   riskLevel: string;
   ingredients: string[];
   newIngredient: string;
   imageData: string | null;
   imageChanged: boolean;
+  nutrition: {
+    energy_kj?: number;
+    protein_g?: number;
+    fat_g?: number;
+    carbohydrate_g?: number;
+    sodium_mg?: number;
+  };
 }
 
 interface GraphNode {
@@ -70,7 +86,23 @@ export default function LibraryPage() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [editState, setEditState] = useState<EditState>({ name: '', riskLevel: 'blue', ingredients: [], newIngredient: '', imageData: null, imageChanged: false });
+  const [editState, setEditState] = useState<EditState>({ 
+    name: '', 
+    category: 'snack',
+    riskLevel: 'blue', 
+    ingredients: [], 
+    newIngredient: '', 
+    imageData: null, 
+    imageChanged: false,
+    nutrition: {}
+  });
+
+  const CATEGORY_OPTIONS = [
+    { value: 'snack', label: '零食/包装食品' },
+    { value: 'fruit', label: '水果' },
+    { value: 'vegetable', label: '蔬菜' },
+    { value: 'other', label: '其他' },
+  ];
   const [saving, setSaving] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<ECharts | null>(null);
@@ -197,10 +229,33 @@ export default function LibraryPage() {
 
   const startEdit = (snack: Snack) => {
     setEditingId(snack.id);
-    setEditState({ name: snack.name, riskLevel: snack.riskLevel, ingredients: [...snack.ingredients], newIngredient: '', imageData: snack.imageData, imageChanged: false });
+    setEditState({ 
+      name: snack.name, 
+      category: snack.category || 'snack',
+      riskLevel: snack.riskLevel, 
+      ingredients: [...snack.ingredients], 
+      newIngredient: '', 
+      imageData: snack.imageData, 
+      imageChanged: false,
+      nutrition: {
+        energy_kj: snack.nutrition.energy_kj ?? undefined,
+        protein_g: snack.nutrition.protein_g ?? undefined,
+        fat_g: snack.nutrition.fat_g ?? undefined,
+        carbohydrate_g: snack.nutrition.carbohydrate_g ?? undefined,
+        sodium_mg: snack.nutrition.sodium_mg ?? undefined,
+      }
+    });
   };
 
   const cancelEdit = () => setEditingId(null);
+
+  const updateEditNutrition = (field: keyof EditState['nutrition'], value: string) => {
+    const numValue = value === '' ? undefined : parseFloat(value);
+    setEditState(prev => ({ 
+      ...prev, 
+      nutrition: { ...prev.nutrition, [field]: numValue } 
+    }));
+  };
 
   const addEditIngredient = () => {
     const trimmed = editState.newIngredient.trim();
@@ -214,14 +269,23 @@ export default function LibraryPage() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editState.name.trim() || editState.ingredients.length === 0 || editingId === null) return;
+    if (!editState.name.trim() || editingId === null) return;
+    
+    // 零食类必须有配料
+    if (editState.category === 'snack' && editState.ingredients.length === 0) {
+      alert('零食类食物请添加配料表');
+      return;
+    }
+
     setSaving(true);
     const riskLabel = RISK_OPTIONS.find(o => o.value === editState.riskLevel)?.label || '低风险';
     const payload: Record<string, unknown> = {
       name: editState.name.trim(),
+      category: editState.category,
       ingredients: editState.ingredients,
       riskLevel: editState.riskLevel,
       riskLabel,
+      nutrition: editState.nutrition,
     };
     if (editState.imageChanged) payload.imageData = editState.imageData;
     const res = await fetch(`/api/snacks/${editingId}`, {
@@ -232,7 +296,22 @@ export default function LibraryPage() {
     setSaving(false);
     if (res.ok) {
       setSnacks(prev => prev.map(s => s.id === editingId
-        ? { ...s, name: editState.name.trim(), riskLevel: editState.riskLevel, riskLabel, ingredients: editState.ingredients, ...(editState.imageChanged ? { imageData: editState.imageData } : {}) }
+        ? { 
+            ...s, 
+            name: editState.name.trim(), 
+            category: editState.category,
+            riskLevel: editState.riskLevel, 
+            riskLabel, 
+            ingredients: editState.ingredients, 
+            nutrition: {
+              energy_kj: editState.nutrition.energy_kj ?? null,
+              protein_g: editState.nutrition.protein_g ?? null,
+              fat_g: editState.nutrition.fat_g ?? null,
+              carbohydrate_g: editState.nutrition.carbohydrate_g ?? null,
+              sodium_mg: editState.nutrition.sodium_mg ?? null,
+            },
+            ...(editState.imageChanged ? { imageData: editState.imageData } : {}) 
+          }
         : s
       ));
       setEditingId(null);
@@ -376,47 +455,80 @@ export default function LibraryPage() {
                         }} />
                       </label>
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                        <input type="text" placeholder="食物名称" value={editState.name} onChange={e => setEditState(s => ({ ...s, name: e.target.value }))} style={{ ...inputStyle, fontSize: '1rem', fontWeight: 600 }} />
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <input type="text" placeholder="食物名称" value={editState.name} onChange={e => setEditState(s => ({ ...s, name: e.target.value }))} style={{ ...inputStyle, flex: 2, fontSize: '1rem', fontWeight: 600 }} />
+                          <select value={editState.category} onChange={e => setEditState(s => ({ ...s, category: e.target.value }))} style={{ ...inputStyle, flex: 1 }}>
+                            {CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
                         <select value={editState.riskLevel} onChange={e => setEditState(s => ({ ...s, riskLevel: e.target.value }))} style={inputStyle}>
                           {RISK_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
                       </div>
                     </div>
 
+                    {/* 营养成分编辑 */}
                     <div>
-                      <span style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 700 }}>配料清单</span>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
-                        {editState.ingredients.map((ing, idx) => (
-                          <div key={idx} style={{ 
-                            display: 'flex', alignItems: 'center', gap: '0.2rem',
-                            padding: '0.25rem 0.5rem', background: COLORS.bg,
-                            borderRadius: '6px', border: `1px solid ${COLORS.greenLight}`,
-                          }}>
-                            <span style={{ fontSize: '0.85rem', color: COLORS.text }}>{ing}</span>
-                            <button type="button" onClick={() => removeEditIngredient(idx)}
-                              style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer', padding: '0 2px', fontSize: '1rem', fontWeight: 700 }}>×</button>
+                      <span style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 700 }}>营养成分 (每 100g/ml)</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.4rem', marginTop: '0.5rem' }}>
+                        {[
+                          { label: '能量(kJ)', field: 'energy_kj' },
+                          { label: '蛋白(g)', field: 'protein_g' },
+                          { label: '脂肪(g)', field: 'fat_g' },
+                          { label: '碳水(g)', field: 'carbohydrate_g' },
+                          { label: '钠(mg)', field: 'sodium_mg' }
+                        ].map(item => (
+                          <div key={item.field}>
+                            <span style={{ fontSize: '0.65rem', color: COLORS.textLight, display: 'block', textAlign: 'center' }}>{item.label}</span>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={editState.nutrition[item.field as keyof EditState['nutrition']] ?? ''}
+                              onChange={(e) => updateEditNutrition(item.field as keyof EditState['nutrition'], e.target.value)}
+                              style={{ ...inputStyle, textAlign: 'center', padding: '0.3rem' }}
+                            />
                           </div>
                         ))}
                       </div>
-                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                        <input type="text" value={editState.newIngredient}
-                          onChange={e => setEditState(s => ({ ...s, newIngredient: e.target.value }))}
-                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEditIngredient(); } }}
-                          placeholder="添加配料..." style={inputStyle} />
-                        <button type="button" onClick={addEditIngredient} style={smallBtnStyle}>添加</button>
-                      </div>
                     </div>
+
+                    {/* 配料编辑 - 仅零食类显示 */}
+                    {(editState.category === 'snack' || editState.category === 'other') && (
+                      <div>
+                        <span style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 700 }}>配料清单</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
+                          {editState.ingredients.map((ing, idx) => (
+                            <div key={idx} style={{ 
+                              display: 'flex', alignItems: 'center', gap: '0.2rem',
+                              padding: '0.25rem 0.5rem', background: COLORS.bg,
+                              borderRadius: '6px', border: `1px solid ${COLORS.greenLight}`,
+                            }}>
+                              <span style={{ fontSize: '0.85rem', color: COLORS.text }}>{ing}</span>
+                              <button type="button" onClick={() => removeEditIngredient(idx)}
+                                style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer', padding: '0 2px', fontSize: '1rem', fontWeight: 700 }}>×</button>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                          <input type="text" value={editState.newIngredient}
+                            onChange={e => setEditState(s => ({ ...s, newIngredient: e.target.value }))}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEditIngredient(); } }}
+                            placeholder="添加配料..." style={inputStyle} />
+                          <button type="button" onClick={addEditIngredient} style={smallBtnStyle}>添加</button>
+                        </div>
+                      </div>
+                    )}
 
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                       <button type="button" onClick={cancelEdit} style={{
                         padding: '0.5rem 1.25rem', background: 'none', color: COLORS.textLight,
                         border: `1px solid ${COLORS.greenLight}`, borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem'
                       }}>取消</button>
-                      <button type="button" onClick={handleSaveEdit} disabled={saving || !editState.name.trim() || editState.ingredients.length === 0}
+                      <button type="button" onClick={handleSaveEdit} disabled={saving || !editState.name.trim()}
                         style={{ 
                           padding: '0.5rem 1.5rem', background: COLORS.green, color: '#fff',
                           border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
-                          opacity: (saving || !editState.name.trim() || editState.ingredients.length === 0) ? 0.5 : 1 
+                          opacity: (saving || !editState.name.trim()) ? 0.5 : 1 
                         }}>
                         {saving ? '保存中...' : '保存修改'}
                       </button>
@@ -451,12 +563,20 @@ export default function LibraryPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div style={{ minWidth: 0 }}>
-                          <span 
-                            title={snack.name}
-                            style={{ fontWeight: 700, fontSize: '1.05rem', color: COLORS.text, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                          >
-                            {snack.name}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span 
+                              title={snack.name}
+                              style={{ fontWeight: 700, fontSize: '1.05rem', color: COLORS.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                            >
+                              {snack.name}
+                            </span>
+                            <span style={{ 
+                              fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '4px', 
+                              background: COLORS.greenLight, color: COLORS.greenDark, fontWeight: 600 
+                            }}>
+                              {CATEGORY_OPTIONS.find(o => o.value === (snack.category || 'snack'))?.label || snack.category || '零食/包装食品'}
+                            </span>
+                          </div>
                           <div style={{ fontSize: '0.75rem', color: COLORS.textLight, marginTop: '0.2rem' }}>
                             {snack.username} · {snack.recordTime}
                           </div>
@@ -471,6 +591,31 @@ export default function LibraryPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* 营养成分展示 */}
+                      {Object.values(snack.nutrition).some(v => v !== null && v !== undefined) && (
+                        <div style={{ 
+                          display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', 
+                          gap: '0.2rem', marginTop: '0.6rem', padding: '0.4rem',
+                          background: '#f9fafb', borderRadius: '6px'
+                        }}>
+                          {[
+                            { label: '能', value: snack.nutrition.energy_kj, unit: '' },
+                            { label: '蛋', value: snack.nutrition.protein_g, unit: 'g' },
+                            { label: '脂', value: snack.nutrition.fat_g, unit: 'g' },
+                            { label: '碳', value: snack.nutrition.carbohydrate_g, unit: 'g' },
+                            { label: '钠', value: snack.nutrition.sodium_mg, unit: 'mg' }
+                          ].map((n, idx) => (
+                            <div key={idx} style={{ textAlign: 'center' }}>
+                              <div style={{ fontSize: '0.6rem', color: COLORS.textLight }}>{n.label}</div>
+                              <div style={{ fontSize: '0.7rem', fontWeight: 600, color: COLORS.text }}>
+                                {n.value !== null && n.value !== undefined ? `${n.value}${n.unit}` : '-'}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.6rem' }}>
                         {snack.ingredients.slice(0, 6).map(renderIngredientTag)}
                         {snack.ingredients.length > 6 && <span style={{ fontSize: '0.7rem', color: COLORS.textLight, alignSelf: 'center' }}>...</span>}

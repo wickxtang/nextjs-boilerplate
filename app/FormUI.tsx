@@ -22,9 +22,26 @@ const RISK_OPTIONS = [
   { value: 'blue', label: '低风险' },
 ];
 
+const CATEGORY_OPTIONS = [
+  { value: 'snack', label: '零食/包装食品' },
+  { value: 'fruit', label: '水果' },
+  { value: 'vegetable', label: '蔬菜' },
+  { value: 'other', label: '其他' },
+];
+
+interface Nutrition {
+  energy_kj?: number;
+  protein_g?: number;
+  fat_g?: number;
+  carbohydrate_g?: number;
+  sodium_mg?: number;
+}
+
 interface OcrResult {
   name: string;
+  category: string;
   ingredients: string[];
+  nutrition: Nutrition;
   riskLevel: string;
   riskLabel: string;
   interpretation: string;
@@ -45,8 +62,10 @@ const FormUI = () => {
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
 
   const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState('snack');
   const [editRiskLevel, setEditRiskLevel] = useState('blue');
   const [editIngredients, setEditIngredients] = useState<string[]>([]);
+  const [editNutrition, setEditNutrition] = useState<Nutrition>({});
   const [newIngredient, setNewIngredient] = useState('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -54,6 +73,7 @@ const FormUI = () => {
   const [ocrStatus, setOcrStatus] = useState('');
   const [rawOcrText, setRawOcrText] = useState('');
   const [copySuccess, setCopyStatus] = useState(false);
+  const [manualNameInput, setManualNameInput] = useState('');
 
   useEffect(() => {
     fetch('/api/auth/me').then(res => {
@@ -102,53 +122,64 @@ const FormUI = () => {
   const handleImageSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const foodFile = fileInputRef.current?.files?.[0];
-    if (!foodFile || !ingredientsFile) {
-      alert('请确保两张图片都已上传');
+    
+    // 如果没有图片也没有手动输入名称，则报错
+    if (!foodFile && !manualNameInput.trim()) {
+      alert('请上传食物图片或输入食物名称');
       return;
     }
 
     setIsProcessing(true);
     setOcrProgress(0);
-    setOcrStatus('正在上传图片进行 AI 解析...');
+    setOcrStatus(manualNameInput && !foodFile ? '正在查询营养库...' : '正在上传图片进行 AI 解析...');
     setRawOcrText('');
 
     try {
-      let finalIngredientsImage: Blob = ingredientsFile;
+      const formData = new FormData();
+      if (foodFile) {
+        formData.append('image', foodFile);
+        
+        let finalIngredientsImage: Blob = ingredientsFile || foodFile;
 
-      // 如果有选中区域，则进行裁剪（为了让 AI 更聚焦）
-      if (imgRef.current && completedCrop && completedCrop.width > 0 && completedCrop.height > 0) {
-        const image = imgRef.current;
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        // 如果有选中区域，则进行裁剪（为了让 AI 更聚焦）
+        if (ingredientsFile && imgRef.current && completedCrop && completedCrop.width > 0 && completedCrop.height > 0) {
+          const image = imgRef.current;
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
 
-        if (ctx) {
-          const scaleX = image.naturalWidth / image.width;
-          const scaleY = image.naturalHeight / image.height;
+          if (ctx) {
+            const scaleX = image.naturalWidth / image.width;
+            const scaleY = image.naturalHeight / image.height;
 
-          canvas.width = completedCrop.width * scaleX;
-          canvas.height = completedCrop.height * scaleY;
+            canvas.width = completedCrop.width * scaleX;
+            canvas.height = completedCrop.height * scaleY;
 
-          ctx.drawImage(
-            image,
-            completedCrop.x * scaleX,
-            completedCrop.y * scaleY,
-            canvas.width,
-            canvas.height,
-            0, 0, canvas.width, canvas.height
-          );
+            ctx.drawImage(
+              image,
+              completedCrop.x * scaleX,
+              completedCrop.y * scaleY,
+              canvas.width,
+              canvas.height,
+              0, 0, canvas.width, canvas.height
+            );
 
-          finalIngredientsImage = await new Promise((resolve) => {
-            canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.9);
-          });
+            finalIngredientsImage = await new Promise((resolve) => {
+              canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.9);
+            });
+          }
         }
+        
+        if (ingredientsFile) {
+          formData.append('ingredientsImage', finalIngredientsImage);
+        }
+      }
+      
+      if (manualNameInput.trim()) {
+        formData.append('manualName', manualNameInput.trim());
       }
 
       setOcrProgress(50);
-      setOcrStatus('AI 正在深度识别中文配料...');
-
-      const formData = new FormData();
-      formData.append('image', foodFile);
-      formData.append('ingredientsImage', finalIngredientsImage);
+      setOcrStatus(manualNameInput && !foodFile ? 'AI 正在分析营养价值...' : 'AI 正在深度识别成分与营养信息...');
 
       const response = await fetch('/api/process-records', {
         method: 'POST',
@@ -156,18 +187,27 @@ const FormUI = () => {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || '请求失败');
+      if (!response.ok) {
+        const err = new Error(data.error || '请求失败') as any;
+        err.suggestion = data.suggestion;
+        err.detail = data.detail;
+        throw err;
+      }
 
       setOcrResult(data);
-      setEditName(data.name || '');
+      setEditName(data.name || manualNameInput || '');
+      setEditCategory(data.category || 'snack');
       setEditRiskLevel(data.riskLevel || 'blue');
       setEditIngredients(data.ingredients || []);
+      setEditNutrition(data.nutrition || {});
       setRawOcrText(data.ocrText || '');
       setSaveStatus('idle');
       setOcrProgress(100);
     } catch (error: any) {
       console.error('Processing failed:', error);
-      alert(`解析失败: ${error.message}`);
+      const errorMsg = error.message || '未知错误';
+      const suggestion = error.suggestion ? `\n\n建议: ${error.suggestion}` : '';
+      alert(`解析失败: ${errorMsg}${suggestion}${error.detail ? `\n\n详情: ${error.detail}` : ''}`);
     } finally {
       setIsProcessing(false);
     }
@@ -204,15 +244,24 @@ const FormUI = () => {
     setImageBase64('');
     setIngredientsImageUrl('');
     setEditName('');
+    setEditCategory('snack');
     setEditRiskLevel('blue');
     setEditIngredients([]);
+    setEditNutrition({});
     setNewIngredient('');
     setSaveStatus('idle');
+    setManualNameInput('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSave = async () => {
-    if (!editName.trim() || editIngredients.length === 0) return;
+    if (!editName.trim()) return;
+    // 水果蔬菜允许配料表为空
+    if (editCategory === 'snack' && editIngredients.length === 0) {
+      alert('零食类食物请添加配料表');
+      return;
+    }
+
     setSaveStatus('saving');
     const riskLabel = RISK_OPTIONS.find(o => o.value === editRiskLevel)?.label || '低风险';
     try {
@@ -221,7 +270,9 @@ const FormUI = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: editName.trim(),
+          category: editCategory,
           ingredients: editIngredients,
+          nutrition: editNutrition,
           riskLevel: editRiskLevel,
           riskLabel,
           interpretation: ocrResult?.interpretation || '',
@@ -246,6 +297,11 @@ const FormUI = () => {
     } catch (err) {
       console.error('Failed to copy!', err);
     }
+  };
+
+  const updateNutrition = (field: keyof Nutrition, value: string) => {
+    const numValue = value === '' ? undefined : parseFloat(value);
+    setEditNutrition(prev => ({ ...prev, [field]: numValue }));
   };
 
   const inputStyle: React.CSSProperties = {
@@ -379,17 +435,28 @@ const FormUI = () => {
         >
           <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
             <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.8rem', color: COLORS.greenDark }}>
-              智能识别配料表
+              智能识别食物成分
             </h2>
             <p style={{ margin: 0, color: COLORS.textLight, fontSize: '0.95rem' }}>
-              上传图片，AI 助您解析成分风险
+              上传图片或输入名称，AI 助您解析成分风险与营养价值
             </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.9rem', color: COLORS.text, fontWeight: 600 }}>1. 输入食物名称 (可选，有助于提高果蔬识别率)</span>
+            <input
+              type="text"
+              placeholder="例如：红富士苹果、西兰花、乐事薯片..."
+              value={manualNameInput}
+              onChange={(e) => setManualNameInput(e.target.value)}
+              style={{ ...inputStyle, padding: '0.75rem' }}
+            />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             {/* 左侧：食物图片 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <span style={{ fontSize: '0.9rem', color: COLORS.text, fontWeight: 600 }}>1. 上传食物正面图</span>
+              <span style={{ fontSize: '0.9rem', color: COLORS.text, fontWeight: 600 }}>2. 上传食物正面图 (可选)</span>
               {imageUrl && (
                 <div style={{
                   borderRadius: '8px',
@@ -424,16 +491,15 @@ const FormUI = () => {
                   type="file"
                   accept="image/*"
                   name="image"
-                  required
                   onChange={handleFileChange}
                   style={{ display: 'none' }}
                 />
               </label>
             </div>
 
-            {/* 右侧：配料表图片 */}
+            {/* 右侧：配料表/营养成分图片 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <span style={{ fontSize: '0.9rem', color: COLORS.text, fontWeight: 600 }}>2. 上传配料表图 (可拖拽选中区域)</span>
+              <span style={{ fontSize: '0.9rem', color: COLORS.text, fontWeight: 600 }}>3. 上传配料表/营养表 (可选)</span>
               {ingredientsImageUrl && (
                 <div style={{
                   borderRadius: '8px',
@@ -451,7 +517,7 @@ const FormUI = () => {
                     <img
                       ref={imgRef}
                       src={ingredientsImageUrl}
-                      alt="配料表预览"
+                      alt="详情预览"
                       style={{ width: '100%', display: 'block' }}
                     />
                   </ReactCrop>
@@ -467,7 +533,7 @@ const FormUI = () => {
                       fontSize: '0.75rem',
                       pointerEvents: 'none',
                     }}>
-                      提示：在图上拖拽选中配料表区域识别更精准
+                      提示：框选配料表或营养表区域识别更精准
                     </div>
                   )}
                 </div>
@@ -489,12 +555,11 @@ const FormUI = () => {
                   textAlign: 'center',
                 }}
               >
-                <span>📄 {ingredientsImageUrl ? '更换配料表' : '点击上传'}</span>
+                <span>📄 {ingredientsImageUrl ? '更换成分图' : '点击上传'}</span>
                 <input
                   type="file"
                   accept="image/*"
                   name="ingredientsImage"
-                  required
                   onChange={handleIngredientsFileChange}
                   style={{ display: 'none' }}
                 />
@@ -504,7 +569,7 @@ const FormUI = () => {
 
           <button
             type="submit"
-            disabled={isProcessing || !imageUrl || !ingredientsImageUrl}
+            disabled={isProcessing || (!imageUrl && !manualNameInput.trim())}
             style={{
               padding: '0.75rem 1.5rem',
               background: COLORS.green,
@@ -513,21 +578,11 @@ const FormUI = () => {
               borderRadius: '8px',
               fontSize: '1rem',
               fontWeight: 600,
-              cursor: (isProcessing || !imageUrl || !ingredientsImageUrl) ? 'not-allowed' : 'pointer',
+              cursor: (isProcessing || (!imageUrl && !manualNameInput.trim())) ? 'not-allowed' : 'pointer',
               transition: 'background 0.2s',
-              opacity: (isProcessing || !imageUrl || !ingredientsImageUrl) ? 0.6 : 1,
+              opacity: (isProcessing || (!imageUrl && !manualNameInput.trim())) ? 0.6 : 1,
               position: 'relative',
               overflow: 'hidden',
-            }}
-            onMouseEnter={(e) => {
-              if (!isProcessing && imageUrl && ingredientsImageUrl) {
-                e.currentTarget.style.background = COLORS.greenDark;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isProcessing && imageUrl && ingredientsImageUrl) {
-                e.currentTarget.style.background = COLORS.green;
-              }
             }}
           >
             {isProcessing && (
@@ -542,7 +597,7 @@ const FormUI = () => {
               }} />
             )}
             <span style={{ position: 'relative', zIndex: 1 }}>
-              {isProcessing ? ocrStatus : '开始智能解析'}
+              {isProcessing ? ocrStatus : (manualNameInput && !imageUrl ? '仅按名称查询营养' : '开始智能解析')}
             </span>
           </button>
 
@@ -566,7 +621,7 @@ const FormUI = () => {
               border: `1px solid #ddd`,
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: COLORS.text }}>OCR 识别结果原文：</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: COLORS.text }}>识别文本：</span>
                 <button
                   type="button"
                   onClick={handleCopyOcr}
@@ -579,7 +634,6 @@ const FormUI = () => {
                     padding: '0.2rem 0.6rem',
                     borderRadius: '4px',
                     fontWeight: 600,
-                    transition: 'all 0.2s'
                   }}
                 >
                   {copySuccess ? '已复制！' : '一键复制'}
@@ -590,7 +644,7 @@ const FormUI = () => {
                 value={rawOcrText}
                 style={{
                   width: '100%',
-                  height: '80px',
+                  height: '60px',
                   fontSize: '0.85rem',
                   border: 'none',
                   background: 'transparent',
@@ -601,81 +655,6 @@ const FormUI = () => {
               />
             </div>
           )}
-
-          <AnimatePresence>
-            {ocrResult && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                style={{
-                  marginTop: '0.5rem',
-                  padding: '1.25rem',
-                  background: '#fff',
-                  borderRadius: '8px',
-                  border: `1px solid ${COLORS.greenLight}`,
-                  overflow: 'hidden'
-                }}>
-                <h2 style={{ margin: '0 0 0.75rem', color: COLORS.text, fontSize: '1.15rem' }}>
-                  {ocrResult.name}
-                </h2>
-
-                <div style={{
-                  display: 'inline-block',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '20px',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  background: COLORS.yellowLight,
-                  color: COLORS.text,
-                  border: `1px solid ${COLORS.yellow}`,
-                  marginBottom: '1rem',
-                }}>
-                  风险等级：{ocrResult.riskLabel}
-                </div>
-
-                <p style={{ color: COLORS.textLight, lineHeight: 1.6, margin: '0 0 1rem' }}>
-                  {ocrResult.interpretation}
-                </p>
-
-                <div style={{ borderTop: `1px solid ${COLORS.greenLight}`, paddingTop: '0.75rem' }}>
-                  <span style={{ fontWeight: 600, color: COLORS.text, fontSize: '0.9rem' }}>成分列表</span>
-                  {ocrResult.ingredients.length > 0 ? (
-                    <ul style={{
-                      margin: '0.5rem 0 0',
-                      padding: '0 0 0 1.25rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.3rem',
-                    }}>
-                      {ocrResult.ingredients.map((ingredient, idx) => (
-                        <motion.li
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: idx * 0.05 }}
-                          key={ingredient}
-                          style={{
-                            color: COLORS.textLight,
-                            fontSize: '0.9rem',
-                            listStyle: 'none',
-                            padding: '0.35rem 0.75rem',
-                            background: COLORS.bg,
-                            borderRadius: '6px',
-                            border: `1px solid ${COLORS.greenLight}`,
-                          }}>
-                          {ingredient}
-                        </motion.li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p style={{ fontSize: '0.85rem', color: COLORS.textLight, fontStyle: 'italic', marginTop: '0.5rem' }}>
-                      未识别出高风险成分，请检查 OCR 文本并手动添加。
-                    </p>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.form>
 
         <AnimatePresence>
@@ -692,99 +671,126 @@ const FormUI = () => {
                 border: `2px solid ${COLORS.greenLight}`,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '1rem',
+                gap: '1.25rem',
               }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', color: COLORS.greenDark }}>
-                编辑并保存
+                确认并完善信息
               </h3>
 
-              <div>
-                <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>食品名称</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  style={{ ...inputStyle, marginTop: '0.35rem' }}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>名称</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    style={{ ...inputStyle, marginTop: '0.35rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>类别</label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value)}
+                    style={{ ...inputStyle, marginTop: '0.35rem' }}
+                  >
+                    {CATEGORY_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>风险等级</label>
-                <select
-                  value={editRiskLevel}
-                  onChange={(e) => setEditRiskLevel(e.target.value)}
-                  style={{ ...inputStyle, marginTop: '0.35rem' }}
-                >
-                  {RISK_OPTIONS.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
+                <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>风险评估 (针对配料)</label>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.35rem' }}>
+                  <select
+                    value={editRiskLevel}
+                    onChange={(e) => setEditRiskLevel(e.target.value)}
+                    style={{ ...inputStyle, flex: 1 }}
+                  >
+                    {RISK_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <div style={{ 
+                    flex: 2, padding: '0.5rem', background: COLORS.bg, 
+                    borderRadius: '6px', fontSize: '0.85rem', color: COLORS.textLight,
+                    border: `1px solid ${COLORS.greenLight}`
+                  }}>
+                    {ocrResult.interpretation}
+                  </div>
+                </div>
               </div>
 
+              {/* 营养成分表 */}
               <div>
-                <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>配料列表</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.35rem' }}>
-                  {editIngredients.map((ing, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{
-                        flex: 1,
-                        padding: '0.4rem 0.75rem',
-                        background: COLORS.bg,
-                        borderRadius: '6px',
-                        border: `1px solid ${COLORS.greenLight}`,
-                        fontSize: '0.9rem',
-                        color: COLORS.text,
-                      }}>
-                        {ing}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeIngredient(idx)}
-                        style={{
-                          ...smallBtnStyle,
-                          background: '#e74c3c',
-                          padding: '0.3rem 0.6rem',
-                          fontSize: '0.8rem',
-                        }}
-                      >
-                        删除
-                      </button>
+                <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>营养成分 (每 100g/ml)</label>
+                <div style={{ 
+                  display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', 
+                  gap: '0.5rem', marginTop: '0.35rem' 
+                }}>
+                  {[
+                    { label: '能量(kJ)', field: 'energy_kj' },
+                    { label: '蛋白(g)', field: 'protein_g' },
+                    { label: '脂肪(g)', field: 'fat_g' },
+                    { label: '碳水(g)', field: 'carbohydrate_g' },
+                    { label: '钠(mg)', field: 'sodium_mg' }
+                  ].map(item => (
+                    <div key={item.field}>
+                      <span style={{ fontSize: '0.7rem', color: COLORS.textLight, display: 'block', textAlign: 'center' }}>{item.label}</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={editNutrition[item.field as keyof Nutrition] || ''}
+                        onChange={(e) => updateNutrition(item.field as keyof Nutrition, e.target.value)}
+                        style={{ ...inputStyle, textAlign: 'center', padding: '0.3rem' }}
+                      />
                     </div>
                   ))}
                 </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                  <input
-                    type="text"
-                    value={newIngredient}
-                    onChange={(e) => setNewIngredient(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addIngredient(); } }}
-                    placeholder="输入配料，如“水、白砂糖、柠檬酸”"
-                    style={inputStyle}
-                  />
-                  <button type="button" onClick={addIngredient} style={smallBtnStyle}>
-                    添加
-                  </button>
-                  <button
-                    type="button"
-                    onClick={splitAndAddIngredients}
-                    style={{
-                      ...smallBtnStyle,
-                      background: COLORS.yellow,
-                      color: COLORS.text,
-                      fontWeight: 600
-                    }}
-                    title="按“、”自动分割并去句号"
-                  >
-                    智能分割
-                  </button>
-                </div>
               </div>
+
+              {/* 配料列表 - 仅零食类显示 */}
+              {(editCategory === 'snack' || editCategory === 'other') && (
+                <div>
+                  <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>配料清单</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
+                    {editIngredients.map((ing, idx) => (
+                      <div key={idx} style={{ 
+                        display: 'flex', alignItems: 'center', gap: '0.2rem',
+                        padding: '0.25rem 0.5rem', background: COLORS.bg,
+                        borderRadius: '4px', border: `1px solid ${COLORS.greenLight}`,
+                      }}>
+                        <span style={{ fontSize: '0.85rem', color: COLORS.text }}>{ing}</span>
+                        <button type="button" onClick={() => removeIngredient(idx)}
+                          style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', padding: '0 2px', fontWeight: 'bold' }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <input
+                      type="text"
+                      value={newIngredient}
+                      onChange={(e) => setNewIngredient(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addIngredient(); } }}
+                      placeholder="手动输入配料"
+                      style={inputStyle}
+                    />
+                    <button type="button" onClick={splitAndAddIngredients} style={{ ...smallBtnStyle, background: COLORS.yellow, color: COLORS.text }}>
+                      智能分割
+                    </button>
+                    <button type="button" onClick={addIngredient} style={smallBtnStyle}>
+                      添加
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={saveStatus === 'saving' || !editName.trim() || editIngredients.length === 0}
+                disabled={saveStatus === 'saving' || !editName.trim()}
                 style={{
                   padding: '0.75rem 1.5rem',
                   background: COLORS.green,
@@ -794,14 +800,14 @@ const FormUI = () => {
                   fontSize: '1rem',
                   fontWeight: 600,
                   cursor: saveStatus === 'saving' ? 'not-allowed' : 'pointer',
-                  opacity: (!editName.trim() || editIngredients.length === 0) ? 0.5 : 1,
+                  opacity: (!editName.trim()) ? 0.5 : 1,
                 }}
               >
-                {saveStatus === 'saving' ? '保存中...' : '保存到数据库'}
+                {saveStatus === 'saving' ? '保存中...' : '确认保存'}
               </button>
 
               {saveStatus === 'error' && (
-                <p style={{ color: '#e74c3c', fontSize: '0.85rem', margin: 0 }}>保存失败，请重试</p>
+                <p style={{ color: '#e74c3c', fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>保存失败，请重试</p>
               )}
             </motion.div>
           )}

@@ -20,7 +20,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (result.error) return NextResponse.json({ error: result.error }, { status: result.status });
 
   const body = await request.json();
-  const { name, ingredients, riskLevel, riskLabel, imageData } = body;
+  const { 
+    name, 
+    category,
+    ingredients, 
+    riskLevel, 
+    riskLabel, 
+    imageData,
+    nutrition 
+  } = body;
 
   if (!name || !Array.isArray(ingredients)) {
     return NextResponse.json({ error: '缺少必填字段' }, { status: 400 });
@@ -28,17 +36,40 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   const stmts: Array<{ sql: string; args: InValue[] }> = [];
 
+  const updateFields = [
+    'name = ?',
+    'category = ?',
+    'risk_level = ?',
+    'risk_label = ?',
+    'energy_kj = ?',
+    'protein_g = ?',
+    'fat_g = ?',
+    'carbohydrate_g = ?',
+    'sodium_mg = ?'
+  ];
+  const args: InValue[] = [
+    name,
+    category || 'snack',
+    riskLevel || null,
+    riskLabel || null,
+    nutrition?.energy_kj ?? null,
+    nutrition?.protein_g ?? null,
+    nutrition?.fat_g ?? null,
+    nutrition?.carbohydrate_g ?? null,
+    nutrition?.sodium_mg ?? null,
+  ];
+
   if (imageData !== undefined) {
-    stmts.push({
-      sql: `UPDATE snacks SET name = ?, risk_level = ?, risk_label = ?, image_data = ? WHERE id = ?`,
-      args: [name, riskLevel || null, riskLabel || null, imageData || null, result.snackId!],
-    });
-  } else {
-    stmts.push({
-      sql: `UPDATE snacks SET name = ?, risk_level = ?, risk_label = ? WHERE id = ?`,
-      args: [name, riskLevel || null, riskLabel || null, result.snackId!],
-    });
+    updateFields.push('image_data = ?');
+    args.push(imageData || null);
   }
+
+  args.push(result.snackId!);
+
+  stmts.push({
+    sql: `UPDATE snacks SET ${updateFields.join(', ')} WHERE id = ?`,
+    args,
+  });
 
   stmts.push({ sql: `DELETE FROM snack_ingredients WHERE snack_id = ?`, args: [result.snackId!] });
 

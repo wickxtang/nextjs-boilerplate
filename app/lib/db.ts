@@ -13,46 +13,74 @@ function getDb(): Client {
   return _db;
 }
 
-function ensureInit(): Promise<void> {
+async function ensureInit(): Promise<void> {
   if (!_initialized) {
-    _initialized = getDb().executeMultiple(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        created_at TEXT DEFAULT (datetime('now'))
-      );
+    _initialized = (async () => {
+      const db = getDb();
+      
+      // 基础建表
+      await db.executeMultiple(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT NOT NULL UNIQUE,
+          password_hash TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now'))
+        );
 
-      CREATE TABLE IF NOT EXISTS snacks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        name TEXT NOT NULL,
-        risk_level TEXT,
-        risk_label TEXT,
-        interpretation TEXT,
-        image_data TEXT,
-        record_time TEXT,
-        created_at TEXT DEFAULT (datetime('now')),
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
+        CREATE TABLE IF NOT EXISTS snacks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER,
+          name TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
 
-      CREATE TABLE IF NOT EXISTS snack_ingredients (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        snack_id INTEGER NOT NULL,
-        ingredient_name TEXT NOT NULL,
-        FOREIGN KEY (snack_id) REFERENCES snacks(id) ON DELETE CASCADE
-      );
+        CREATE TABLE IF NOT EXISTS snack_ingredients (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          snack_id INTEGER NOT NULL,
+          ingredient_name TEXT NOT NULL,
+          FOREIGN KEY (snack_id) REFERENCES snacks(id) ON DELETE CASCADE
+        );
 
-      CREATE TABLE IF NOT EXISTS checkins (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        snack_id INTEGER NOT NULL,
-        checkin_date TEXT NOT NULL,
-        created_at TEXT DEFAULT (datetime('now')),
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (snack_id) REFERENCES snacks(id) ON DELETE CASCADE
-      );
-    `);
+        CREATE TABLE IF NOT EXISTS checkins (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          snack_id INTEGER NOT NULL,
+          checkin_date TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (snack_id) REFERENCES snacks(id) ON DELETE CASCADE
+        );
+      `);
+
+      // 动态升级：为已存在的表添加新列 (SQLite 不支持 ADD COLUMN IF NOT EXISTS)
+      // 我们通过捕获错误来模拟这一行为
+      const columnsToAdd = [
+        { name: 'category', type: "TEXT DEFAULT 'snack'" },
+        { name: 'risk_level', type: 'TEXT' },
+        { name: 'risk_label', type: 'TEXT' },
+        { name: 'interpretation', type: 'TEXT' },
+        { name: 'image_data', type: 'TEXT' },
+        { name: 'energy_kj', type: 'REAL' },
+        { name: 'protein_g', type: 'REAL' },
+        { name: 'fat_g', type: 'REAL' },
+        { name: 'carbohydrate_g', type: 'REAL' },
+        { name: 'sodium_mg', type: 'REAL' },
+        { name: 'record_time', type: 'TEXT' }
+      ];
+
+      for (const col of columnsToAdd) {
+        try {
+          await db.execute(`ALTER TABLE snacks ADD COLUMN ${col.name} ${col.type}`);
+          console.log(`Added column ${col.name} to snacks table.`);
+        } catch (e: any) {
+          // 如果列已存在，SQLite 会报错，我们直接忽略
+          if (!e.message?.includes('duplicate column name') && !e.message?.includes('already exists')) {
+            console.error(`Error adding column ${col.name}:`, e.message);
+          }
+        }
+      }
+    })();
   }
   return _initialized;
 }
