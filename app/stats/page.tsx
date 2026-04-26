@@ -27,6 +27,8 @@ interface Checkin {
   name: string;
   riskLevel: string;
   ingredients: string[];
+  amount: number | null;
+  calories: number | null;
 }
 
 export default function StatsPage() {
@@ -40,6 +42,7 @@ export default function StatsPage() {
   const [selectedSnackId, setSelectedSnackId] = useState<string>('');
   const [snackSearchQuery, setSnackSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [retroAmount, setRetroAmount] = useState<string>('100');
 
   const fetchCheckins = async () => {
     const res = await fetch('/api/checkins');
@@ -66,12 +69,21 @@ export default function StatsPage() {
     if (!selectedSnackId) return;
     setIsSubmitting(true);
     try {
+      // 获取食物详情以计算热量
+      const snackRes = await fetch(`/api/snacks/${selectedSnackId}`);
+      const snackData = await snackRes.json();
+      const amount = parseFloat(retroAmount) || 0;
+      const energyKj = snackData.nutrition?.energy_kj || 0;
+      const calories = (energyKj / 4.184) * (amount / 100);
+
       const res = await fetch('/api/checkins', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           snackId: parseInt(selectedSnackId),
-          date: selectedDate.toLocaleDateString('en-CA')
+          date: selectedDate.toLocaleDateString('en-CA'),
+          amount,
+          calories: Math.round(calories * 10) / 10
         }),
       });
       if (res.ok) {
@@ -116,12 +128,14 @@ export default function StatsPage() {
     const getTopItems = (filteredCheckins: Checkin[]) => {
       const snackCounts: Record<string, number> = {};
       const ingredientCounts: Record<string, number> = {};
+      let totalCalories = 0;
 
       filteredCheckins.forEach(c => {
         snackCounts[c.name] = (snackCounts[c.name] || 0) + 1;
         c.ingredients?.forEach(ing => {
           ingredientCounts[ing] = (ingredientCounts[ing] || 0) + 1;
         });
+        totalCalories += c.calories || 0;
       });
 
       const topSnacks = Object.entries(snackCounts)
@@ -132,7 +146,7 @@ export default function StatsPage() {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5);
 
-      return { topSnacks, topIngredients };
+      return { topSnacks, topIngredients, totalCalories };
     };
 
     const now = new Date();
@@ -353,6 +367,20 @@ export default function StatsPage() {
                     ))
                   }
                 </select>
+                <input
+                  type="number"
+                  placeholder="量(g/ml)"
+                  value={retroAmount}
+                  onChange={(e) => setRetroAmount(e.target.value)}
+                  style={{
+                    width: '70px',
+                    padding: '0.4rem',
+                    borderRadius: '6px',
+                    border: `1px solid ${COLORS.greenLight}`,
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                />
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -376,13 +404,25 @@ export default function StatsPage() {
           </div>
 
           <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
-            <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.5rem' }}>{selectedDate.toLocaleDateString()} 的记录</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '0.9rem', margin: 0 }}>{selectedDate.toLocaleDateString()} 的记录</h3>
+              {dayRecords.length > 0 && (
+                <span style={{ fontSize: '0.85rem', color: COLORS.greenDark, fontWeight: 700 }}>
+                  总热量: {Math.round(dayRecords.reduce((sum, r) => sum + (r.calories || 0), 0))} kcal
+                </span>
+              )}
+            </div>
             {dayRecords.length > 0 ? (
               <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.85rem', color: COLORS.textLight }}>
                 {dayRecords.map(r => (
                   <li key={r.id} style={{ marginBottom: '0.4rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>{r.name}</span>
+                      <span>
+                        {r.name} 
+                        <span style={{ fontSize: '0.75rem', opacity: 0.7, marginLeft: '0.4rem' }}>
+                          ({r.amount || 0}{r.riskLevel === 'drink' ? 'ml' : 'g'}) · {Math.round(r.calories || 0)} kcal
+                        </span>
+                      </span>
                       <button 
                         onClick={() => deleteCheckin(r.id)}
                         style={{ 
@@ -407,10 +447,41 @@ export default function StatsPage() {
         </section>
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* 当日热量汇总看板 */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{ 
+              padding: '1.25rem', 
+              background: 'linear-gradient(135deg, #7ecf5f 0%, #5ba33d 100%)', 
+              borderRadius: '16px', 
+              color: '#fff',
+              boxShadow: '0 8px 20px rgba(91, 163, 61, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center'
+            }}
+          >
+            <div style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '0.25rem' }}>今日已摄入热量</div>
+            <div style={{ fontSize: '2.2rem', fontWeight: 800, margin: '0.2rem 0' }}>
+              {Math.round(dayRecords.reduce((sum, r) => sum + (r.calories || 0), 0))}
+              <span style={{ fontSize: '1rem', fontWeight: 400, marginLeft: '0.4rem', opacity: 0.8 }}>kcal</span>
+            </div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>共打卡 {dayRecords.length} 次食物</div>
+          </motion.div>
+
           <div style={{ padding: '1.5rem', background: COLORS.bg, borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
-            <h2 style={{ fontSize: '1.1rem', margin: '0 0 1rem', color: COLORS.greenDark }}>近一周汇总</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <h2 style={{ fontSize: '1.1rem', margin: 0, color: COLORS.greenDark }}>近一周汇总</h2>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.75rem', color: COLORS.textLight }}>总摄入热量</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: COLORS.greenDark }}>{Math.round(stats.week.totalCalories)} <span style={{ fontSize: '0.8rem' }}>kcal</span></div>
+              </div>
+            </div>
             <div style={{ marginBottom: '1rem' }}>
-              <strong style={{ fontSize: '0.85rem' }}>吃得最多的零食：</strong>
+              <strong style={{ fontSize: '0.85rem' }}>吃得最多的食物：</strong>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
                 {stats.week.topSnacks.map(([name, count]) => (
                   <span key={name} style={{ background: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: `1px solid ${COLORS.greenLight}` }}>{name} ({count}次)</span>
@@ -428,7 +499,13 @@ export default function StatsPage() {
           </div>
 
           <div style={{ padding: '1.5rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
-            <h2 style={{ fontSize: '1.1rem', margin: '0 0 1rem', color: COLORS.greenDark }}>近一月汇总</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <h2 style={{ fontSize: '1.1rem', margin: 0, color: COLORS.greenDark }}>近一月汇总</h2>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.75rem', color: COLORS.textLight }}>总摄入热量</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: COLORS.greenDark }}>{Math.round(stats.month.totalCalories)} <span style={{ fontSize: '0.8rem' }}>kcal</span></div>
+              </div>
+            </div>
             <div style={{ marginBottom: '1rem' }}>
               <strong style={{ fontSize: '0.85rem' }}>最常回购：</strong>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>

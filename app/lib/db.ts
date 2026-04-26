@@ -53,9 +53,8 @@ async function ensureInit(): Promise<void> {
         );
       `);
 
-      // 动态升级：为已存在的表添加新列 (SQLite 不支持 ADD COLUMN IF NOT EXISTS)
-      // 我们通过捕获错误来模拟这一行为
-      const columnsToAdd = [
+      // 动态升级：为 snacks 表添加新列
+      const snackColumnsToAdd = [
         { name: 'category', type: "TEXT DEFAULT 'snack'" },
         { name: 'risk_level', type: 'TEXT' },
         { name: 'risk_label', type: 'TEXT' },
@@ -69,14 +68,28 @@ async function ensureInit(): Promise<void> {
         { name: 'record_time', type: 'TEXT' }
       ];
 
-      for (const col of columnsToAdd) {
+      for (const col of snackColumnsToAdd) {
         try {
           await db.execute(`ALTER TABLE snacks ADD COLUMN ${col.name} ${col.type}`);
-          console.log(`Added column ${col.name} to snacks table.`);
         } catch (e: any) {
-          // 如果列已存在，SQLite 会报错，我们直接忽略
           if (!e.message?.includes('duplicate column name') && !e.message?.includes('already exists')) {
-            console.error(`Error adding column ${col.name}:`, e.message);
+            console.error(`Error adding column ${col.name} to snacks:`, e.message);
+          }
+        }
+      }
+
+      // 动态升级：为 checkins 表添加摄入量和热量列
+      const checkinColumnsToAdd = [
+        { name: 'amount', type: 'REAL' },   // 摄入量 (g 或 ml)
+        { name: 'calories', type: 'REAL' } // 计算出的热量 (kcal)
+      ];
+
+      for (const col of checkinColumnsToAdd) {
+        try {
+          await db.execute(`ALTER TABLE checkins ADD COLUMN ${col.name} ${col.type}`);
+        } catch (e: any) {
+          if (!e.message?.includes('duplicate column name') && !e.message?.includes('already exists')) {
+            console.error(`Error adding column ${col.name} to checkins:`, e.message);
           }
         }
       }

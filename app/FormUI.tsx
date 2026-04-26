@@ -23,11 +23,12 @@ const RISK_OPTIONS = [
 ];
 
 const CATEGORY_OPTIONS = [
-  { value: 'snack', label: '零食/包装食品' },
-  { value: 'fruit', label: '水果' },
-  { value: 'vegetable', label: '蔬菜' },
-  { value: 'other', label: '其他' },
-];
+    { value: 'snack', label: '零食/包装食品' },
+    { value: 'fruit', label: '水果' },
+    { value: 'vegetable', label: '蔬菜' },
+    { value: 'drink', label: '饮料' },
+    { value: 'other', label: '其他' },
+  ];
 
 interface Nutrition {
   energy_kj?: number;

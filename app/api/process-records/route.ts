@@ -87,13 +87,13 @@ export async function POST(request: NextRequest) {
       
       要求：
       1. 必须提供每 100g/100ml 的平均营养数值，不能返回 null。
-      2. 类别 (category) 必须是 'snack', 'fruit', 'vegetable', 'other' 之一。
+      2. 类别 (category) 必须是 'snack', 'fruit', 'vegetable', 'drink', 'other' 之一。
       3. 配料表 (ingredients) 对于天然果蔬应返回空数组 []。
       
       返回 JSON 格式：
       {
         "name": "规范的食品全称",
-        "category": "snack|fruit|vegetable|other",
+        "category": "snack|fruit|vegetable|drink|other",
         "ingredients": [],
         "nutrition": {
           "energy_kj": 能量数值(kJ),
@@ -116,12 +116,12 @@ export async function POST(request: NextRequest) {
       
       注意：
       - 仅提取数值，忽略单位。
-      - 类别 (category) 必须是 'snack', 'fruit', 'vegetable', 'other' 之一。
+      - 类别 (category) 必须是 'snack', 'fruit', 'vegetable', 'drink', 'other' 之一。
       
       返回 JSON 格式：
       {
         "name": "包装上的产品名称",
-        "category": "snack|fruit|vegetable|other",
+        "category": "snack|fruit|vegetable|drink|other",
         "ingredients": ["配料1", "配料2", ...],
         "nutrition": {
           "energy_kj": 能量,

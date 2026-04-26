@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
     id: number;
     snack_id: number;
     checkin_date: string;
+    amount: number | null;
+    calories: number | null;
     name: string;
     risk_level: string;
   }>(`
@@ -42,6 +44,8 @@ export async function GET(request: NextRequest) {
     id: c.id,
     snackId: c.snack_id,
     date: c.checkin_date,
+    amount: c.amount,
+    calories: c.calories,
     name: c.name,
     riskLevel: c.risk_level,
     ingredients: ingredientsMap[c.snack_id] || [],
@@ -56,15 +60,15 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: '请先登录' }, { status: 401 });
 
   try {
-    const { snackId, date } = await request.json();
+    const { snackId, date, amount, calories } = await request.json();
     if (!snackId) return NextResponse.json({ error: '未提供食物ID' }, { status: 400 });
 
     // 如果未提供日期，默认使用服务器当前本地日期 (YYYY-MM-DD)
     const checkinDate = date || new Date().toLocaleDateString('en-CA'); // en-CA format is YYYY-MM-DD
 
     await execute(
-      `INSERT INTO checkins (user_id, snack_id, checkin_date) VALUES (?, ?, ?)`,
-      [user.userId, snackId, checkinDate]
+      `INSERT INTO checkins (user_id, snack_id, checkin_date, amount, calories) VALUES (?, ?, ?, ?, ?)`,
+      [user.userId, snackId, checkinDate, amount || null, calories || null]
     );
 
     return NextResponse.json({ success: true });

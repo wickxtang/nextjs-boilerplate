@@ -101,9 +101,12 @@ export default function LibraryPage() {
     { value: 'snack', label: '零食/包装食品' },
     { value: 'fruit', label: '水果' },
     { value: 'vegetable', label: '蔬菜' },
+    { value: 'drink', label: '饮料' },
     { value: 'other', label: '其他' },
   ];
-  const [saving, setSaving] = useState(false);
+
+  const [checkinModal, setCheckinModal] = useState<{ open: boolean; snack: Snack | null }>({ open: false, snack: null });
+  const [checkinAmount, setCheckinAmount] = useState<string>('100');
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<ECharts | null>(null);
 
@@ -208,20 +211,31 @@ export default function LibraryPage() {
     loadGraph();
   }, [tab, currentUserId, router]);
 
+  const [saving, setSaving] = useState(false);
+
   const handleDelete = async (id: number) => {
     if (!confirm('确定删除这条记录吗？')) return;
     const res = await fetch(`/api/snacks/${id}`, { method: 'DELETE' });
     if (res.ok) setSnacks(prev => prev.filter(s => s.id !== id));
   };
 
-  const handleCheckin = async (snackId: number) => {
+  const handleCheckin = async (snack: Snack, amount: number) => {
+    // 计算热量: (kJ / 4.184) * (amount / 100)
+    const energyKj = snack.nutrition.energy_kj || 0;
+    const calories = (energyKj / 4.184) * (amount / 100);
+
     const res = await fetch('/api/checkins', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ snackId }),
+      body: JSON.stringify({ 
+        snackId: snack.id,
+        amount,
+        calories: Math.round(calories * 10) / 10 // 保留一位小数
+      }),
     });
     if (res.ok) {
-      alert('打卡成功！已记录到今日食用清单。');
+      alert(`打卡成功！已记录今日摄入 ${amount}${snack.category === 'drink' ? 'ml' : 'g'}，约 ${Math.round(calories)} kcal。`);
+      setCheckinModal({ open: false, snack: null });
     } else {
       alert('打卡失败，请重试');
     }
@@ -626,7 +640,10 @@ export default function LibraryPage() {
                         <motion.button 
                           whileHover={{ scale: 1.05 }} 
                           whileTap={{ scale: 0.95 }} 
-                          onClick={() => handleCheckin(snack.id)} 
+                          onClick={() => {
+                            setCheckinAmount('100');
+                            setCheckinModal({ open: true, snack });
+                          }} 
                           style={{ 
                             ...smallBtnStyle, 
                             padding: '0.3rem 1rem', 
@@ -688,6 +705,89 @@ export default function LibraryPage() {
             </div>
           ) : renderListView()}
         </motion.div>
+      </AnimatePresence>
+
+      {/* 打卡摄入量弹窗 */}
+      <AnimatePresence>
+        {checkinModal.open && checkinModal.snack && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: '1rem'
+          }}>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              style={{
+                background: '#fff', borderRadius: '16px', padding: '1.5rem',
+                width: '100%', maxWidth: '320px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+              }}
+            >
+              <h3 style={{ margin: '0 0 1rem', fontSize: '1.1rem', color: COLORS.text }}>确认打卡</h3>
+              <p style={{ fontSize: '0.9rem', color: COLORS.textLight, marginBottom: '1.25rem' }}>
+                今天摄入了多少 <strong>{checkinModal.snack.name}</strong>？
+              </p>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                <input
+                  type="number"
+                  autoFocus
+                  value={checkinAmount}
+                  onChange={(e) => setCheckinAmount(e.target.value)}
+                  style={{ 
+                    ...inputStyle, 
+                    fontSize: '1.2rem', 
+                    textAlign: 'center', 
+                    padding: '0.6rem',
+                    fontWeight: 700,
+                    color: COLORS.greenDark
+                  }}
+                />
+                <span style={{ fontWeight: 600, color: COLORS.textLight }}>
+                  {checkinModal.snack.category === 'drink' ? 'ml' : 'g'}
+                </span>
+              </div>
+
+              {checkinModal.snack.nutrition.energy_kj ? (
+                <div style={{ 
+                  background: COLORS.bg, padding: '0.75rem', borderRadius: '8px', 
+                  marginBottom: '1.5rem', fontSize: '0.85rem', color: COLORS.textLight,
+                  textAlign: 'center'
+                }}>
+                  预计摄入热量: <strong style={{ color: COLORS.greenDark, fontSize: '1rem' }}>
+                    {Math.round((checkinModal.snack.nutrition.energy_kj / 4.184) * (parseFloat(checkinAmount) || 0) / 100)}
+                  </strong> kcal
+                </div>
+              ) : (
+                <p style={{ fontSize: '0.75rem', color: COLORS.red, textAlign: 'center', marginBottom: '1.5rem' }}>
+                  ⚠️ 该食物暂无营养数据，无法计算热量
+                </p>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button 
+                  onClick={() => setCheckinModal({ open: false, snack: null })}
+                  style={{ 
+                    flex: 1, padding: '0.6rem', background: '#f5f5f5', border: 'none', 
+                    borderRadius: '8px', color: COLORS.textLight, cursor: 'pointer' 
+                  }}
+                >
+                  取消
+                </button>
+                <button 
+                  onClick={() => handleCheckin(checkinModal.snack!, parseFloat(checkinAmount) || 0)}
+                  style={{ 
+                    flex: 2, padding: '0.6rem', background: COLORS.green, border: 'none', 
+                    borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: 'pointer' 
+                  }}
+                >
+                  确认打卡
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </main>
   );
