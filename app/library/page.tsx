@@ -36,6 +36,7 @@ interface Snack {
   userId: number;
   name: string;
   category: string;
+  brandName: string;
   riskLevel: string;
   riskLabel: string;
   interpretation: string;
@@ -49,6 +50,8 @@ interface Snack {
     fat_g: number | null;
     carbohydrate_g: number | null;
     sodium_mg: number | null;
+    serving_size: number | null;
+    serving_unit: string | null;
   };
 }
 
@@ -60,7 +63,10 @@ interface EditState {
   newIngredient: string;
   imageData: string | null;
   imageChanged: boolean;
+  brandName: string | null;
   nutrition: {
+    serving_unit: string | null;
+    serving_size: number | null;
     energy_kj?: number;
     protein_g?: number;
     fat_g?: number;
@@ -94,7 +100,11 @@ export default function LibraryPage() {
     newIngredient: '', 
     imageData: null, 
     imageChanged: false,
-    nutrition: {}
+    brandName: null,
+    nutrition: {
+      serving_unit: null,
+      serving_size: null,
+    }
   });
 
   const CATEGORY_OPTIONS = [
@@ -254,9 +264,12 @@ export default function LibraryPage() {
       riskLevel: snack.riskLevel, 
       ingredients: [...snack.ingredients], 
       newIngredient: '', 
+      brandName: snack.brandName,
       imageData: snack.imageData, 
       imageChanged: false,
       nutrition: {
+        serving_unit: snack.nutrition.serving_unit ?? null,
+        serving_size: snack.nutrition.serving_size ?? null,
         energy_kj: snack.nutrition.energy_kj ?? undefined,
         protein_g: snack.nutrition.protein_g ?? undefined,
         fat_g: snack.nutrition.fat_g ?? undefined,
@@ -328,6 +341,8 @@ export default function LibraryPage() {
               fat_g: editState.nutrition.fat_g ?? null,
               carbohydrate_g: editState.nutrition.carbohydrate_g ?? null,
               sodium_mg: editState.nutrition.sodium_mg ?? null,
+              serving_size: editState.nutrition.serving_size ?? null,
+              serving_unit: editState.nutrition.serving_unit ?? null,
             },
             ...(editState.imageChanged ? { imageData: editState.imageData } : {}) 
           }

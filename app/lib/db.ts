@@ -39,6 +39,8 @@ async function ensureInit(): Promise<void> {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           snack_id INTEGER NOT NULL,
           ingredient_name TEXT NOT NULL,
+          quantity REAL DEFAULT 100,
+          unit TEXT DEFAULT 'g',
           FOREIGN KEY (snack_id) REFERENCES snacks(id) ON DELETE CASCADE
         );
 
@@ -48,6 +50,8 @@ async function ensureInit(): Promise<void> {
           snack_id INTEGER NOT NULL,
           checkin_date TEXT NOT NULL,
           created_at TEXT DEFAULT (datetime('now')),
+          quantity REAL DEFAULT 100,
+          unit TEXT DEFAULT 'g',
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
           FOREIGN KEY (snack_id) REFERENCES snacks(id) ON DELETE CASCADE
         );
@@ -96,10 +100,28 @@ async function ensureInit(): Promise<void> {
         );
       `);
 
+      // 动态升级：为 snack_ingredients 表添加数量和单位列
+      const snackIngredientColumnsToAdd = [
+        { name: 'quantity', type: 'REAL DEFAULT 100' },
+        { name: 'unit', type: "TEXT DEFAULT 'g'" }
+      ];
+
+      for (const col of snackIngredientColumnsToAdd) {
+        try {
+          await db.execute(`ALTER TABLE snack_ingredients ADD COLUMN ${col.name} ${col.type}`);
+        } catch (e: any) {
+          if (!e.message?.includes('duplicate column name') && !e.message?.includes('already exists')) {
+            console.error(`Error adding column ${col.name} to snack_ingredients:`, e.message);
+          }
+        }
+      }
+
       // 动态升级：为 checkins 表添加摄入量和热量列
       const checkinColumnsToAdd = [
         { name: 'amount', type: 'REAL' },   // 摄入量 (g 或 ml)
-        { name: 'calories', type: 'REAL' } // 计算出的热量 (kcal)
+        { name: 'calories', type: 'REAL' }, // 计算出的热量 (kcal)
+        { name: 'quantity', type: 'REAL DEFAULT 100' },
+        { name: 'unit', type: "TEXT DEFAULT 'g'" }
       ];
 
       for (const col of checkinColumnsToAdd) {

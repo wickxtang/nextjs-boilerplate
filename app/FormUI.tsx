@@ -331,7 +331,7 @@ const FormUI = () => {
 
   const updateNutrition = (field: keyof Nutrition, value: string) => {
     const numValue = value === '' ? undefined : parseFloat(value);
-    setEditNutrition(prev => ({ ...prev, [field]: numValue }));
+    setEditNutrition((prev: any) => ({ ...prev, [field]: numValue }));
   };
 
   const inputStyle: React.CSSProperties = {
@@ -785,7 +785,7 @@ const FormUI = () => {
                       type="number"
                       value={servingSize}
                       onChange={(e) => setServingSize(e.target.value)}
-                      style={{ ...inputStyle, width: '60px', textAlign: 'center' }}
+                      style={{ ...inputStyle, width: '100px', textAlign: 'center' }}
                     />
                     <select
                       value={servingUnit}
