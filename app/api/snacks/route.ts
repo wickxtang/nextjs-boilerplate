@@ -29,6 +29,9 @@ export async function GET(request: NextRequest) {
     fat_g: number | null;
     carbohydrate_g: number | null;
     sodium_mg: number | null;
+    brand_name: string | null;
+    serving_size: number | null;
+    serving_unit: string | null;
     record_time: string;
     created_at: string;
     username: string;
@@ -54,6 +57,7 @@ export async function GET(request: NextRequest) {
     id: s.id,
     userId: s.user_id,
     name: s.name,
+    brandName: s.brand_name,
     category: s.category,
     riskLevel: s.risk_level,
     riskLabel: s.risk_label,
@@ -65,6 +69,8 @@ export async function GET(request: NextRequest) {
       fat_g: s.fat_g,
       carbohydrate_g: s.carbohydrate_g,
       sodium_mg: s.sodium_mg,
+      serving_size: s.serving_size || 100,
+      serving_unit: s.serving_unit || 'g',
     },
     recordTime: s.record_time,
     createdAt: s.created_at,

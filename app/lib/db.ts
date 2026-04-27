@@ -65,7 +65,10 @@ async function ensureInit(): Promise<void> {
         { name: 'fat_g', type: 'REAL' },
         { name: 'carbohydrate_g', type: 'REAL' },
         { name: 'sodium_mg', type: 'REAL' },
-        { name: 'record_time', type: 'TEXT' }
+        { name: 'record_time', type: 'TEXT' },
+        { name: 'brand_name', type: 'TEXT' },
+        { name: 'serving_size', type: 'REAL DEFAULT 100' },
+        { name: 'serving_unit', type: "TEXT DEFAULT 'g'" }
       ];
 
       for (const col of snackColumnsToAdd) {
@@ -77,6 +80,21 @@ async function ensureInit(): Promise<void> {
           }
         }
       }
+
+      // 基础建表 - 新增 meals 表
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS meals (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          meal_type TEXT NOT NULL, -- 'breakfast', 'lunch', 'dinner', 'snack'
+          image_data TEXT,
+          food_items TEXT, -- JSON string of identified foods
+          total_calories REAL,
+          meal_date TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
 
       // 动态升级：为 checkins 表添加摄入量和热量列
       const checkinColumnsToAdd = [

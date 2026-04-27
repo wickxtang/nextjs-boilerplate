@@ -86,9 +86,19 @@ export async function POST(request: NextRequest) {
       请根据该名称（参考图片确认品种）提供该食品的标准化营养数据。
       
       要求：
-      1. 必须提供每 100g/100ml 的平均营养数值，不能返回 null。
-      2. 类别 (category) 必须是 'snack', 'fruit', 'vegetable', 'drink', 'other' 之一。
-      3. 配料表 (ingredients) 对于天然果蔬应返回空数组 []。
+      1. 食品名称 (name): 规范的名称（如“富士苹果”）。
+      2. 食品类别 (category): 必须从以下选项中选择：
+         - 'grain': 谷薯类 (米面土豆等)
+         - 'vegetable': 蔬菜类
+         - 'fruit': 水果类
+         - 'meat_egg': 畜禽肉蛋类
+         - 'aquatic': 水产品 (鱼虾贝等)
+         - 'dairy': 奶类及奶制品
+         - 'soy_nut': 大豆及坚果类
+         - 'snack': 零食/包装食品
+         - 'drink': 饮料
+         - 'other': 其他
+      3. 配料表 (ingredients): 对于天然果蔬应返回空数组 []。
       
       返回 JSON 格式：
       {
@@ -116,7 +126,17 @@ export async function POST(request: NextRequest) {
       
       注意：
       - 仅提取数值，忽略单位。
-      - 类别 (category) 必须是 'snack', 'fruit', 'vegetable', 'drink', 'other' 之一。
+      - 类别 (category) 必须从以下选项中选择：
+        - 'grain': 谷薯类 (米面土豆等)
+        - 'vegetable': 蔬菜类
+        - 'fruit': 水果类
+        - 'meat_egg': 畜禽肉蛋类
+        - 'aquatic': 水产品 (鱼虾贝等)
+        - 'dairy': 奶类及奶制品
+        - 'soy_nut': 大豆及坚果类
+        - 'snack': 零食/包装食品
+        - 'drink': 饮料
+        - 'other': 其他
       
       返回 JSON 格式：
       {

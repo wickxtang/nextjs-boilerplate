@@ -12,6 +12,53 @@ async function getOwnerSnack(params: Promise<{ id: string }>, userId: number) {
   return { snackId };
 }
 
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const snackId = Number(id);
+
+  const snack = await queryOne<{
+    id: number;
+    user_id: number;
+    name: string;
+    category: string;
+    risk_level: string;
+    risk_label: string;
+    interpretation: string;
+    image_data: string | null;
+    energy_kj: number | null;
+    protein_g: number | null;
+    fat_g: number | null;
+    carbohydrate_g: number | null;
+    sodium_mg: number | null;
+    record_time: string;
+    created_at: string;
+  }>('SELECT * FROM snacks WHERE id = ?', [snackId]);
+
+  if (!snack) {
+    return NextResponse.json({ error: '记录不存在' }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    id: snack.id,
+    userId: snack.user_id,
+    name: snack.name,
+    category: snack.category,
+    riskLevel: snack.risk_level,
+    riskLabel: snack.risk_label,
+    interpretation: snack.interpretation,
+    imageData: snack.image_data,
+    nutrition: {
+      energy_kj: snack.energy_kj,
+      protein_g: snack.protein_g,
+      fat_g: snack.fat_g,
+      carbohydrate_g: snack.carbohydrate_g,
+      sodium_mg: snack.sodium_mg,
+    },
+    recordTime: snack.record_time,
+    createdAt: snack.created_at,
+  });
+}
+
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: '请先登录' }, { status: 401 });

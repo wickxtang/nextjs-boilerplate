@@ -23,9 +23,14 @@ const RISK_OPTIONS = [
 ];
 
 const CATEGORY_OPTIONS = [
+    { value: 'grain', label: '谷薯类 (米面土豆)' },
+    { value: 'vegetable', label: '蔬菜类' },
+    { value: 'fruit', label: '水果类' },
+    { value: 'meat_egg', label: '畜禽肉蛋类' },
+    { value: 'aquatic', label: '水产品 (鱼虾贝)' },
+    { value: 'dairy', label: '奶类及奶制品' },
+    { value: 'soy_nut', label: '大豆及坚果类' },
     { value: 'snack', label: '零食/包装食品' },
-    { value: 'fruit', label: '水果' },
-    { value: 'vegetable', label: '蔬菜' },
     { value: 'drink', label: '饮料' },
     { value: 'other', label: '其他' },
   ];
@@ -66,7 +71,10 @@ const FormUI = () => {
   const [editCategory, setEditCategory] = useState('snack');
   const [editRiskLevel, setEditRiskLevel] = useState('blue');
   const [editIngredients, setEditIngredients] = useState<string[]>([]);
-  const [editNutrition, setEditNutrition] = useState<Nutrition>({});
+  const [editNutrition, setEditNutrition] = useState<any>({});
+  const [editBrandName, setEditBrandName] = useState('');
+  const [servingSize, setServingSize] = useState('100');
+  const [servingUnit, setServingUnit] = useState('g');
   const [newIngredient, setNewIngredient] = useState('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -197,10 +205,13 @@ const FormUI = () => {
 
       setOcrResult(data);
       setEditName(data.name || manualNameInput || '');
+      setEditBrandName(data.brandName || '');
       setEditCategory(data.category || 'snack');
       setEditRiskLevel(data.riskLevel || 'blue');
       setEditIngredients(data.ingredients || []);
       setEditNutrition(data.nutrition || {});
+      setServingSize(data.nutrition?.serving_size?.toString() || '100');
+      setServingUnit(data.nutrition?.serving_unit || 'g');
       setRawOcrText(data.ocrText || '');
       setSaveStatus('idle');
       setOcrProgress(100);
@@ -255,6 +266,19 @@ const FormUI = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleManualInput = () => {
+    setEditName(manualNameInput || '');
+    setEditBrandName('');
+    setEditCategory('snack');
+    setEditRiskLevel('blue');
+    setEditIngredients([]);
+    setEditNutrition({});
+    setServingSize('100');
+    setServingUnit('g');
+    setOcrResult({ success: true } as any); // 触发编辑表单显示
+    setOcrProgress(100);
+  };
+
   const handleSave = async () => {
     if (!editName.trim()) return;
     // 水果蔬菜允许配料表为空
@@ -271,13 +295,18 @@ const FormUI = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: editName.trim(),
+          brandName: editBrandName.trim(),
           category: editCategory,
           ingredients: editIngredients,
-          nutrition: editNutrition,
           riskLevel: editRiskLevel,
           riskLabel,
           interpretation: ocrResult?.interpretation || '',
           imageData: imageBase64,
+          nutrition: {
+            ...editNutrition,
+            serving_size: parseFloat(servingSize) || 100,
+            serving_unit: servingUnit,
+          },
         }),
       });
       if (res.ok) {
@@ -568,39 +597,61 @@ const FormUI = () => {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={isProcessing || (!imageUrl && !manualNameInput.trim())}
-            style={{
-              padding: '0.75rem 1.5rem',
-              background: COLORS.green,
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: 600,
-              cursor: (isProcessing || (!imageUrl && !manualNameInput.trim())) ? 'not-allowed' : 'pointer',
-              transition: 'background 0.2s',
-              opacity: (isProcessing || (!imageUrl && !manualNameInput.trim())) ? 0.6 : 1,
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            {isProcessing && (
-              <div style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                height: '100%',
-                width: `${ocrProgress}%`,
-                background: 'rgba(255,255,255,0.2)',
-                transition: 'width 0.3s ease',
-              }} />
-            )}
-            <span style={{ position: 'relative', zIndex: 1 }}>
-              {isProcessing ? ocrStatus : (manualNameInput && !imageUrl ? '仅按名称查询营养' : '开始智能解析')}
-            </span>
-          </button>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              type="submit"
+              disabled={isProcessing || (!imageUrl && !manualNameInput.trim())}
+              style={{
+                flex: 1,
+                padding: '0.75rem 1.5rem',
+                background: COLORS.green,
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: 600,
+                cursor: (isProcessing || (!imageUrl && !manualNameInput.trim())) ? 'not-allowed' : 'pointer',
+                transition: 'background 0.2s',
+                opacity: (isProcessing || (!imageUrl && !manualNameInput.trim())) ? 0.6 : 1,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {isProcessing && (
+                <div style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  height: '100%',
+                  width: `${ocrProgress}%`,
+                  background: 'rgba(255,255,255,0.2)',
+                  transition: 'width 0.3s ease',
+                }} />
+              )}
+              <span style={{ position: 'relative', zIndex: 1 }}>
+                {isProcessing ? ocrStatus : (manualNameInput && !imageUrl ? '仅按名称查询营养' : '开始智能解析')}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleManualInput}
+              disabled={isProcessing}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'none',
+                color: COLORS.greenDark,
+                border: `2px solid ${COLORS.green}`,
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: 600,
+                cursor: isProcessing ? 'not-allowed' : 'pointer',
+                opacity: isProcessing ? 0.6 : 1,
+              }}
+            >
+              手动输入成分
+            </button>
+          </div>
 
           {isProcessing && (
             <div style={{
@@ -678,59 +729,80 @@ const FormUI = () => {
                 确认并完善信息
               </h3>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>名称</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <input
+                  type="text"
+                  placeholder="食物全称"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  style={{ ...inputStyle, fontSize: '1rem', fontWeight: 600 }}
+                />
+                
+                {/* 品牌名 - 仅非果蔬类显示 */}
+                {editCategory !== 'fruit' && editCategory !== 'vegetable' && (
                   <input
                     type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    style={{ ...inputStyle, marginTop: '0.35rem' }}
+                    placeholder="品牌名称 (例如: 乐事, 农夫山泉)"
+                    value={editBrandName}
+                    onChange={(e) => setEditBrandName(e.target.value)}
+                    style={{ ...inputStyle, fontSize: '0.9rem' }}
                   />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>类别</label>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <select
                     value={editCategory}
                     onChange={(e) => setEditCategory(e.target.value)}
-                    style={{ ...inputStyle, marginTop: '0.35rem' }}
+                    style={{ ...inputStyle, flex: 1 }}
                   >
-                    {CATEGORY_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
+                    {CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>风险评估 (针对配料)</label>
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.35rem' }}>
                   <select
                     value={editRiskLevel}
                     onChange={(e) => setEditRiskLevel(e.target.value)}
                     style={{ ...inputStyle, flex: 1 }}
                   >
-                    {RISK_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
+                    {RISK_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
-                  <div style={{ 
-                    flex: 2, padding: '0.5rem', background: COLORS.bg, 
-                    borderRadius: '6px', fontSize: '0.85rem', color: COLORS.textLight,
-                    border: `1px solid ${COLORS.greenLight}`
-                  }}>
-                    {ocrResult.interpretation}
-                  </div>
                 </div>
               </div>
 
-              {/* 营养成分表 */}
-              <div>
-                <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>营养成分 (每 100g/ml)</label>
-                <div style={{ 
-                  display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', 
-                  gap: '0.5rem', marginTop: '0.35rem' 
-                }}>
+              <div style={{ 
+                padding: '0.75rem', background: COLORS.bg, 
+                borderRadius: '8px', fontSize: '0.85rem', color: COLORS.textLight,
+                border: `1px solid ${COLORS.greenLight}`
+              }}>
+                <span style={{ fontWeight: 600, color: COLORS.text, marginRight: '0.5rem' }}>AI 解析:</span>
+                {ocrResult.interpretation}
+              </div>
+
+              {/* 计量单位与营养成分 */}
+              <div style={{ background: '#f9fafb', padding: '1rem', borderRadius: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: COLORS.text }}>营养成分 (每)</span>
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      value={servingSize}
+                      onChange={(e) => setServingSize(e.target.value)}
+                      style={{ ...inputStyle, width: '60px', textAlign: 'center' }}
+                    />
+                    <select
+                      value={servingUnit}
+                      onChange={(e) => setServingUnit(e.target.value)}
+                      style={{ ...inputStyle, width: '70px' }}
+                    >
+                      <option value="g">g</option>
+                      <option value="ml">ml</option>
+                      <option value="杯">杯</option>
+                      <option value="个">个</option>
+                      <option value="片">片</option>
+                      <option value="袋">袋</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
                   {[
                     { label: '能量(kJ)', field: 'energy_kj' },
                     { label: '蛋白(g)', field: 'protein_g' },
@@ -739,13 +811,13 @@ const FormUI = () => {
                     { label: '钠(mg)', field: 'sodium_mg' }
                   ].map(item => (
                     <div key={item.field}>
-                      <span style={{ fontSize: '0.7rem', color: COLORS.textLight, display: 'block', textAlign: 'center' }}>{item.label}</span>
+                      <span style={{ fontSize: '0.65rem', color: COLORS.textLight, display: 'block', textAlign: 'center', marginBottom: '0.25rem' }}>{item.label}</span>
                       <input
                         type="number"
                         step="0.1"
-                        value={editNutrition[item.field as keyof Nutrition] || ''}
+                        value={editNutrition[item.field as keyof Nutrition] ?? ''}
                         onChange={(e) => updateNutrition(item.field as keyof Nutrition, e.target.value)}
-                        style={{ ...inputStyle, textAlign: 'center', padding: '0.3rem' }}
+                        style={{ ...inputStyle, textAlign: 'center', padding: '0.3rem', fontSize: '0.85rem' }}
                       />
                     </div>
                   ))}

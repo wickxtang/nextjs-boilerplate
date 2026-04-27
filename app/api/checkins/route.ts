@@ -14,9 +14,10 @@ export async function GET(request: NextRequest) {
     amount: number | null;
     calories: number | null;
     name: string;
+    category: string;
     risk_level: string;
   }>(`
-    SELECT c.*, s.name, s.risk_level 
+    SELECT c.*, s.name, s.category, s.risk_level 
     FROM checkins c 
     JOIN snacks s ON c.snack_id = s.id 
     WHERE c.user_id = ? 
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest) {
     amount: c.amount,
     calories: c.calories,
     name: c.name,
+    category: c.category,
     riskLevel: c.risk_level,
     ingredients: ingredientsMap[c.snack_id] || [],
   }));

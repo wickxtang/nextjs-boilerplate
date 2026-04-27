@@ -25,11 +25,22 @@ interface Checkin {
   snackId: number;
   date: string;
   name: string;
+  category: string;
   riskLevel: string;
   ingredients: string[];
   amount: number | null;
   calories: number | null;
 }
+
+const DIETARY_TARGETS: Record<string, { label: string; min: number; max: number; unit: string; color: string }> = {
+  grain: { label: '谷薯类', min: 250, max: 400, unit: 'g', color: '#8e44ad' },
+  vegetable: { label: '蔬菜类', min: 300, max: 500, unit: 'g', color: '#27ae60' },
+  fruit: { label: '水果类', min: 200, max: 350, unit: 'g', color: '#e67e22' },
+  meat_egg: { label: '畜禽肉蛋', min: 120, max: 200, unit: 'g', color: '#c0392b' },
+  aquatic: { label: '水产品', min: 40, max: 75, unit: 'g', color: '#2980b9' },
+  dairy: { label: '奶及制品', min: 300, max: 500, unit: 'g', color: '#34495e' },
+  soy_nut: { label: '大豆坚果', min: 25, max: 35, unit: 'g', color: '#f1c40f' },
+};
 
 export default function StatsPage() {
   const router = useRouter();
@@ -122,6 +133,19 @@ export default function StatsPage() {
     const dateStr = selectedDate.toLocaleDateString('en-CA');
     return checkins.filter(c => c.date === dateStr);
   }, [selectedDate, checkins]);
+
+  // 计算每日膳食摄入达标情况
+  const dietaryProgress = useMemo(() => {
+    const progress: Record<string, number> = {};
+    Object.keys(DIETARY_TARGETS).forEach(key => progress[key] = 0);
+    
+    dayRecords.forEach(record => {
+      if (progress[record.category] !== undefined) {
+        progress[record.category] += record.amount || 0;
+      }
+    });
+    return progress;
+  }, [dayRecords]);
 
   // 统计数据计算
   const stats = useMemo(() => {
@@ -285,8 +309,8 @@ export default function StatsPage() {
       </motion.div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
-        <section>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '-0.5rem' }}>
             <h2 style={{ fontSize: '1.1rem', margin: 0, color: COLORS.greenDark }}>食用日历</h2>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -317,7 +341,7 @@ export default function StatsPage() {
             activeStartDate={activeStartDate || undefined}
             onActiveStartDateChange={({ activeStartDate: newActiveStartDate }) => setActiveStartDate(newActiveStartDate)}
           />
-          <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
+          <div style={{ padding: '1rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
             <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.75rem', color: COLORS.greenDark }}>补录零食 ({selectedDate.toLocaleDateString()})</h3>
             
             {/* 补录搜索与选择 */}
@@ -403,46 +427,58 @@ export default function StatsPage() {
             </div>
           </div>
 
-          <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <h3 style={{ fontSize: '0.9rem', margin: 0 }}>{selectedDate.toLocaleDateString()} 的记录</h3>
-              {dayRecords.length > 0 && (
-                <span style={{ fontSize: '0.85rem', color: COLORS.greenDark, fontWeight: 700 }}>
-                  总热量: {Math.round(dayRecords.reduce((sum, r) => sum + (r.calories || 0), 0))} kcal
-                </span>
-              )}
+          {/* 近一周汇总 */}
+          <div style={{ padding: '1.5rem', background: COLORS.bg, borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <h2 style={{ fontSize: '1.1rem', margin: 0, color: COLORS.greenDark }}>近一周汇总</h2>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.75rem', color: COLORS.textLight }}>总摄入热量</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: COLORS.greenDark }}>{Math.round(stats.week.totalCalories)} <span style={{ fontSize: '0.8rem' }}>kcal</span></div>
+              </div>
             </div>
-            {dayRecords.length > 0 ? (
-              <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.85rem', color: COLORS.textLight }}>
-                {dayRecords.map(r => (
-                  <li key={r.id} style={{ marginBottom: '0.4rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>
-                        {r.name} 
-                        <span style={{ fontSize: '0.75rem', opacity: 0.7, marginLeft: '0.4rem' }}>
-                          ({r.amount || 0}{r.riskLevel === 'drink' ? 'ml' : 'g'}) · {Math.round(r.calories || 0)} kcal
-                        </span>
-                      </span>
-                      <button 
-                        onClick={() => deleteCheckin(r.id)}
-                        style={{ 
-                          background: 'none', 
-                          border: 'none', 
-                          color: '#ccc', 
-                          cursor: 'pointer', 
-                          fontSize: '0.75rem',
-                          padding: '2px 4px'
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.color = COLORS.red)}
-                        onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
-                      >
-                        删除
-                      </button>
-                    </div>
-                  </li>
+            <div style={{ marginBottom: '1rem' }}>
+              <strong style={{ fontSize: '0.85rem' }}>吃得最多的食物：</strong>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
+                {stats.week.topSnacks.map(([name, count]) => (
+                  <span key={name} style={{ background: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: `1px solid ${COLORS.greenLight}` }}>{name} ({count}次)</span>
                 ))}
-              </ul>
-            ) : <p style={{ fontSize: '0.85rem', color: COLORS.textLight, margin: 0 }}>当天没有记录</p>}
+              </div>
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.85rem' }}>摄入最多的配料：</strong>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
+                {stats.week.topIngredients.map(([name, count]) => (
+                  <span key={name} style={{ background: COLORS.yellowLight, padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: `1px solid ${COLORS.yellow}` }}>{name} ({count}次)</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 近一月汇总 */}
+          <div style={{ padding: '1.5rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <h2 style={{ fontSize: '1.1rem', margin: 0, color: COLORS.greenDark }}>近一月汇总</h2>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.75rem', color: COLORS.textLight }}>总摄入热量</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: COLORS.greenDark }}>{Math.round(stats.month.totalCalories)} <span style={{ fontSize: '0.8rem' }}>kcal</span></div>
+              </div>
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <strong style={{ fontSize: '0.85rem' }}>最常回购：</strong>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
+                {stats.month.topSnacks.map(([name, count]) => (
+                  <span key={name} style={{ background: '#f8f9fa', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: `1px solid #ddd` }}>{name} ({count}次)</span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.85rem' }}>主要配料：</strong>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
+                {stats.month.topIngredients.map(([name, count]) => (
+                  <span key={name} style={{ background: COLORS.blueLight, padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: `1px solid ${COLORS.blue}` }}>{name} ({count}次)</span>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -472,56 +508,87 @@ export default function StatsPage() {
             <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>共打卡 {dayRecords.length} 次食物</div>
           </motion.div>
 
-          <div style={{ padding: '1.5rem', background: COLORS.bg, borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <h2 style={{ fontSize: '1.1rem', margin: 0, color: COLORS.greenDark }}>近一周汇总</h2>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.75rem', color: COLORS.textLight }}>总摄入热量</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: COLORS.greenDark }}>{Math.round(stats.week.totalCalories)} <span style={{ fontSize: '0.8rem' }}>kcal</span></div>
-              </div>
+          {/* 膳食指南摄入进度 */}
+          <div style={{ padding: '1.25rem', background: '#fff', borderRadius: '16px', border: `1px solid ${COLORS.greenLight}` }}>
+            <h3 style={{ fontSize: '1rem', margin: '0 0 1rem', color: COLORS.greenDark, fontWeight: 700 }}>当日膳食摄入达标情况</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              {Object.entries(DIETARY_TARGETS).map(([key, target]) => {
+                const current = dietaryProgress[key] || 0;
+                const percentage = Math.min((current / target.min) * 100, 100);
+                const isEnough = current >= target.min;
+                const isOver = current > target.max;
+
+                return (
+                  <div key={key}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.3rem' }}>
+                      <span style={{ fontWeight: 600 }}>{target.label}</span>
+                      <span style={{ color: isOver ? COLORS.red : (isEnough ? COLORS.greenDark : COLORS.textLight) }}>
+                        {current}{target.unit} / {target.min}-{target.max}{target.unit}
+                        {isEnough ? ' ✅' : ''}
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', background: '#f0f0f0', borderRadius: '4px', overflow: 'hidden' }}>
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percentage}%` }}
+                        style={{ 
+                          height: '100%', 
+                          background: isEnough ? (isOver ? COLORS.red : target.color) : target.color,
+                          opacity: isEnough ? 1 : 0.5,
+                          borderRadius: '4px' 
+                        }} 
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <strong style={{ fontSize: '0.85rem' }}>吃得最多的食物：</strong>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
-                {stats.week.topSnacks.map(([name, count]) => (
-                  <span key={name} style={{ background: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: `1px solid ${COLORS.greenLight}` }}>{name} ({count}次)</span>
-                ))}
-              </div>
-            </div>
-            <div>
-              <strong style={{ fontSize: '0.85rem' }}>摄入最多的配料：</strong>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
-                {stats.week.topIngredients.map(([name, count]) => (
-                  <span key={name} style={{ background: COLORS.yellowLight, padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: `1px solid ${COLORS.yellow}` }}>{name} ({count}次)</span>
-                ))}
-              </div>
-            </div>
+            <p style={{ fontSize: '0.7rem', color: COLORS.textLight, marginTop: '1rem', fontStyle: 'italic' }}>
+              * 进度条到达 100% 表示达到指南推荐的每日最低摄入量。
+            </p>
           </div>
 
-          <div style={{ padding: '1.5rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <h2 style={{ fontSize: '1.1rem', margin: 0, color: COLORS.greenDark }}>近一月汇总</h2>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.75rem', color: COLORS.textLight }}>总摄入热量</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: COLORS.greenDark }}>{Math.round(stats.month.totalCalories)} <span style={{ fontSize: '0.8rem' }}>kcal</span></div>
-              </div>
+          {/* 当日记录详情 */}
+          <div style={{ padding: '1rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '0.9rem', margin: 0 }}>{selectedDate.toLocaleDateString()} 的记录</h3>
+              {dayRecords.length > 0 && (
+                <span style={{ fontSize: '0.85rem', color: COLORS.greenDark, fontWeight: 700 }}>
+                  总热量: {Math.round(dayRecords.reduce((sum, r) => sum + (r.calories || 0), 0))} kcal
+                </span>
+              )}
             </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <strong style={{ fontSize: '0.85rem' }}>最常回购：</strong>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
-                {stats.month.topSnacks.map(([name, count]) => (
-                  <span key={name} style={{ background: '#f8f9fa', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: `1px solid #ddd` }}>{name} ({count}次)</span>
+            {dayRecords.length > 0 ? (
+              <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.85rem', color: COLORS.textLight }}>
+                {dayRecords.map(r => (
+                  <li key={r.id} style={{ marginBottom: '0.4rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>
+                        {r.name} 
+                        <span style={{ fontSize: '0.75rem', opacity: 0.7, marginLeft: '0.4rem' }}>
+                          ({r.amount || 0}{r.category === 'drink' ? 'ml' : 'g'}) · {Math.round(r.calories || 0)} kcal
+                        </span>
+                      </span>
+                      <button 
+                        onClick={() => deleteCheckin(r.id)}
+                        style={{ 
+                          background: 'none', 
+                          border: 'none', 
+                          color: '#ccc', 
+                          cursor: 'pointer', 
+                          fontSize: '0.75rem',
+                          padding: '2px 4px'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = COLORS.red)}
+                        onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </li>
                 ))}
-              </div>
-            </div>
-            <div>
-              <strong style={{ fontSize: '0.85rem' }}>主要配料：</strong>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
-                {stats.month.topIngredients.map(([name, count]) => (
-                  <span key={name} style={{ background: COLORS.blueLight, padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: `1px solid ${COLORS.blue}` }}>{name} ({count}次)</span>
-                ))}
-              </div>
-            </div>
+              </ul>
+            ) : <p style={{ fontSize: '0.85rem', color: COLORS.textLight, margin: 0 }}>当天没有记录</p>}
           </div>
         </section>
       </div>

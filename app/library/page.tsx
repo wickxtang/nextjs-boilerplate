@@ -98,9 +98,14 @@ export default function LibraryPage() {
   });
 
   const CATEGORY_OPTIONS = [
+    { value: 'grain', label: '谷薯类' },
+    { value: 'vegetable', label: '蔬菜类' },
+    { value: 'fruit', label: '水果类' },
+    { value: 'meat_egg', label: '畜禽肉蛋类' },
+    { value: 'aquatic', label: '水产品' },
+    { value: 'dairy', label: '奶类及制品' },
+    { value: 'soy_nut', label: '大豆坚果' },
     { value: 'snack', label: '零食/包装食品' },
-    { value: 'fruit', label: '水果' },
-    { value: 'vegetable', label: '蔬菜' },
     { value: 'drink', label: '饮料' },
     { value: 'other', label: '其他' },
   ];
@@ -597,6 +602,11 @@ export default function LibraryPage() {
                               {snack.username} · {snack.recordTime}
                             </span>
                           </div>
+                          {snack.brandName && (
+                            <div style={{ fontSize: '0.8rem', color: COLORS.textLight, marginTop: '0.1rem', fontStyle: 'italic' }}>
+                              品牌: {snack.brandName}
+                            </div>
+                          )}
                         </div>
                         {isOwner && (
                           <div style={{ display: 'flex', gap: '0.1rem', opacity: 0.5 }}>
@@ -613,6 +623,9 @@ export default function LibraryPage() {
                           gap: '0.2rem', marginTop: '0.6rem', padding: '0.4rem',
                           background: '#f9fafb', borderRadius: '6px'
                         }}>
+                          <div style={{ gridColumn: '1 / -1', fontSize: '0.65rem', color: COLORS.textLight, marginBottom: '0.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.1rem' }}>
+                            每 {snack.nutrition.serving_size}{snack.nutrition.serving_unit} 含量
+                          </div>
                           {[
                             { label: '能', value: snack.nutrition.energy_kj, unit: '' },
                             { label: '蛋', value: snack.nutrition.protein_g, unit: 'g' },

@@ -57,6 +57,90 @@ const IARC_LEVELS = [
   },
 ];
 
+const DIETARY_GUIDELINES = [
+  {
+    category: '谷薯类',
+    icon: '🍚',
+    amount: '250-400g',
+    key: 'grain',
+    description: '包括大米、小麦、玉米、土豆等。建议全谷物和杂豆占 50-150g，薯类 50-100g。',
+    tips: '主食要粗细搭配，多吃全谷物。',
+  },
+  {
+    category: '蔬菜类',
+    icon: '🥦',
+    amount: '300-500g',
+    key: 'vegetable',
+    description: '保证每天摄入不少于 300g 蔬菜，深色蔬菜应占 1/2。',
+    tips: '餐餐有蔬菜，颜色越深营养通常越丰富。',
+  },
+  {
+    category: '水果类',
+    icon: '🍎',
+    amount: '200-350g',
+    key: 'fruit',
+    description: '每天摄入 200-350g 新鲜水果。',
+    tips: '果汁不能代替鲜果。',
+  },
+  {
+    category: '畜禽肉蛋类',
+    icon: '🥩',
+    amount: '120-200g',
+    key: 'meat_egg',
+    description: '平均每天摄入 120-200g 畜禽肉、水产品和蛋类。',
+    tips: '少吃加工肉制品，优先选择鱼类和禽类。',
+  },
+  {
+    category: '奶类及奶制品',
+    icon: '🥛',
+    amount: '300-500g',
+    key: 'dairy',
+    description: '每天摄入 300-500g 奶类或相当量的奶制品。',
+    tips: '相当于每天一袋/瓶牛奶。',
+  },
+  {
+    category: '大豆及坚果类',
+    icon: '🥜',
+    amount: '25-35g',
+    key: 'soy_nut',
+    description: '每天摄入 25-35g 大豆及坚果。',
+    tips: '大豆制品是优质蛋白的重要来源。',
+  },
+];
+
+const ANTI_INFLAMMATORY_KNOWLEDGE = [
+  {
+    title: '促炎食物 (应减少摄入)',
+    icon: '🔥',
+    items: [
+      { name: '超加工食品', desc: '含高量添加糖、精制碳水和反式脂肪（如甜点、薯片）。' },
+      { name: '精制碳水', desc: '白米、白面等，会导致血糖快速升高，诱发炎症。' },
+      { name: '红肉及加工肉类', desc: '如香肠、培根。富含饱和脂肪，过多摄入会刺激炎症。' },
+      { name: '部分植物油', desc: '富含 Omega-6 的油类（如玉米油、大豆油）过量摄入。' },
+    ]
+  },
+  {
+    title: '抗炎食物 (建议多吃)',
+    icon: '🛡️',
+    items: [
+      { name: '深海鱼类', desc: '富含 Omega-3 的三文鱼、鲭鱼。' },
+      { name: '浆果类', desc: '蓝莓、草莓等富含花青素。' },
+      { name: '十字花科蔬菜', desc: '西兰花、羽衣甘蓝，富含异硫氰酸盐。' },
+      { name: '香辛料', desc: '姜黄（姜黄素）、生姜、大蒜。' },
+      { name: '绿茶', desc: '富含茶多酚（EGCG）。' },
+    ]
+  },
+  {
+    title: '抗炎饮食原则',
+    icon: '📜',
+    items: [
+      { name: '彩虹原则', desc: '每天摄入 5 种以上颜色的果蔬，获取不同抗氧化剂。' },
+      { name: '全谷物替代', desc: '用糙米、燕麦、藜麦代替精制米面。' },
+      { name: '优质油脂', desc: '优先选择橄榄油、牛油果、坚果。' },
+    ]
+  }
+];
+
 export default function KnowledgePage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -205,6 +289,51 @@ export default function KnowledgePage() {
               </motion.p>
             )}
           </AnimatePresence>
+        </div>
+      </section>
+
+      <section style={{ marginBottom: '3rem' }}>
+        <motion.h2 
+          initial={{ opacity: 0, x: -20 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          style={{ fontSize: '1.2rem', borderLeft: `4px solid ${COLORS.green}`, paddingLeft: '0.75rem', marginBottom: '1.5rem' }}>
+          《中国居民膳食指南 2022》推荐
+        </motion.h2>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+          {DIETARY_GUIDELINES.map((item, idx) => (
+            <motion.div
+              key={item.key}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: idx * 0.05 }}
+              style={{
+                padding: '1.25rem',
+                borderRadius: '12px',
+                background: '#fff',
+                border: `1px solid ${COLORS.greenLight}`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '1.5rem' }}>{item.icon}</span>
+                <span style={{ fontSize: '1rem', fontWeight: 700, color: COLORS.greenDark }}>{item.amount}</span>
+              </div>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>{item.category}</h3>
+              <p style={{ fontSize: '0.85rem', color: COLORS.text, margin: 0, lineHeight: 1.5 }}>{item.description}</p>
+              <div style={{
+                marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: COLORS.bg,
+                borderRadius: '6px', fontSize: '0.8rem', color: COLORS.textLight,
+                fontStyle: 'italic'
+              }}>
+                💡 {item.tips}
+              </div>
+            </motion.div>
+          ))}
         </div>
       </section>
 

@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { 
     name, 
+    brandName,
     category,
     ingredients, 
     riskLevel, 
@@ -26,12 +27,13 @@ export async function POST(request: NextRequest) {
 
   const snackResult = await execute(
     `INSERT INTO snacks (
-      user_id, name, category, risk_level, risk_label, interpretation, image_data, 
-      energy_kj, protein_g, fat_g, carbohydrate_g, sodium_mg, record_time
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, date('now'))`,
+      user_id, name, brand_name, category, risk_level, risk_label, interpretation, image_data, 
+      energy_kj, protein_g, fat_g, carbohydrate_g, sodium_mg, serving_size, serving_unit, record_time
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, date('now'))`,
     [
       user.userId, 
       name, 
+      brandName || null,
       category || 'snack',
       riskLevel || null, 
       riskLabel || null, 
@@ -41,7 +43,9 @@ export async function POST(request: NextRequest) {
       nutrition?.protein_g || null,
       nutrition?.fat_g || null,
       nutrition?.carbohydrate_g || null,
-      nutrition?.sodium_mg || null
+      nutrition?.sodium_mg || null,
+      nutrition?.serving_size || 100,
+      nutrition?.serving_unit || 'g'
     ]
   );
   const snackId = Number(snackResult.lastInsertRowid);
