@@ -13,11 +13,16 @@ function getDb(): Client {
   return _db;
 }
 
+function resetConnection() {
+  _db = null;
+  _initialized = null;
+}
+
 async function ensureInit(): Promise<void> {
   if (!_initialized) {
     _initialized = (async () => {
       const db = getDb();
-      
+
       // 基础建表
       await db.executeMultiple(`
         CREATE TABLE IF NOT EXISTS users (
@@ -134,28 +139,50 @@ async function ensureInit(): Promise<void> {
         }
       }
     })();
+
+    _initialized.catch(() => resetConnection());
   }
   return _initialized;
 }
 
 export async function queryOne<T>(sql: string, args: InValue[] = []): Promise<T | undefined> {
   await ensureInit();
-  const result = await getDb().execute({ sql, args });
-  return result.rows[0] as unknown as T | undefined;
+  try {
+    const result = await getDb().execute({ sql, args });
+    return result.rows[0] as unknown as T | undefined;
+  } catch (e) {
+    resetConnection();
+    throw e;
+  }
 }
 
 export async function queryAll<T>(sql: string, args: InValue[] = []): Promise<T[]> {
   await ensureInit();
-  const result = await getDb().execute({ sql, args });
-  return result.rows as unknown as T[];
+  try {
+    const result = await getDb().execute({ sql, args });
+    return result.rows as unknown as T[];
+  } catch (e) {
+    resetConnection();
+    throw e;
+  }
 }
 
 export async function execute(sql: string, args: InValue[] = []) {
   await ensureInit();
-  return getDb().execute({ sql, args });
+  try {
+    return await getDb().execute({ sql, args });
+  } catch (e) {
+    resetConnection();
+    throw e;
+  }
 }
 
 export async function batch(stmts: Array<{ sql: string; args: InValue[] }>) {
   await ensureInit();
-  return getDb().batch(stmts, 'write');
+  try {
+    return await getDb().batch(stmts, 'write');
+  } catch (e) {
+    resetConnection();
+    throw e;
+  }
 }

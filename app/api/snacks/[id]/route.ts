@@ -20,6 +20,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     id: number;
     user_id: number;
     name: string;
+    brand_name: string | null;
     category: string;
     risk_level: string;
     risk_label: string;
@@ -30,6 +31,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     fat_g: number | null;
     carbohydrate_g: number | null;
     sodium_mg: number | null;
+    serving_size: number | null;
+    serving_unit: string | null;
     record_time: string;
     created_at: string;
   }>('SELECT * FROM snacks WHERE id = ?', [snackId]);
@@ -42,6 +45,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     id: snack.id,
     userId: snack.user_id,
     name: snack.name,
+    brandName: snack.brand_name,
     category: snack.category,
     riskLevel: snack.risk_level,
     riskLabel: snack.risk_label,
@@ -53,6 +57,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       fat_g: snack.fat_g,
       carbohydrate_g: snack.carbohydrate_g,
       sodium_mg: snack.sodium_mg,
+      serving_size: snack.serving_size || 100,
+      serving_unit: snack.serving_unit || 'g',
     },
     recordTime: snack.record_time,
     createdAt: snack.created_at,
@@ -67,14 +73,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (result.error) return NextResponse.json({ error: result.error }, { status: result.status });
 
   const body = await request.json();
-  const { 
-    name, 
+  const {
+    name,
+    brandName,
     category,
-    ingredients, 
-    riskLevel, 
-    riskLabel, 
+    ingredients,
+    riskLevel,
+    riskLabel,
     imageData,
-    nutrition 
+    nutrition
   } = body;
 
   if (!name || !Array.isArray(ingredients)) {
@@ -85,6 +92,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   const updateFields = [
     'name = ?',
+    'brand_name = ?',
     'category = ?',
     'risk_level = ?',
     'risk_label = ?',
@@ -92,10 +100,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     'protein_g = ?',
     'fat_g = ?',
     'carbohydrate_g = ?',
-    'sodium_mg = ?'
+    'sodium_mg = ?',
+    'serving_size = ?',
+    'serving_unit = ?'
   ];
   const args: InValue[] = [
     name,
+    brandName || null,
     category || 'snack',
     riskLevel || null,
     riskLabel || null,
@@ -104,6 +115,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     nutrition?.fat_g ?? null,
     nutrition?.carbohydrate_g ?? null,
     nutrition?.sodium_mg ?? null,
+    nutrition?.serving_size ?? 100,
+    nutrition?.serving_unit ?? 'g',
   ];
 
   if (imageData !== undefined) {

@@ -825,7 +825,7 @@ const FormUI = () => {
               </div>
 
               {/* 配料列表 - 仅零食类显示 */}
-              {(editCategory === 'snack' || editCategory === 'other') && (
+              {editCategory !== 'fruit' && editCategory !== 'vegetable' && (
                 <div>
                   <label style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 600 }}>配料清单</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>

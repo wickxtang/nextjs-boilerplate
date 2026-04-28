@@ -313,6 +313,7 @@ export default function LibraryPage() {
     const riskLabel = RISK_OPTIONS.find(o => o.value === editState.riskLevel)?.label || '低风险';
     const payload: Record<string, unknown> = {
       name: editState.name.trim(),
+      brandName: editState.brandName,
       category: editState.category,
       ingredients: editState.ingredients,
       riskLevel: editState.riskLevel,
@@ -328,9 +329,10 @@ export default function LibraryPage() {
     setSaving(false);
     if (res.ok) {
       setSnacks(prev => prev.map(s => s.id === editingId
-        ? { 
-            ...s, 
-            name: editState.name.trim(), 
+        ? {
+            ...s,
+            name: editState.name.trim(),
+            brandName: editState.brandName || '',
             category: editState.category,
             riskLevel: editState.riskLevel, 
             riskLabel, 
@@ -496,6 +498,9 @@ export default function LibraryPage() {
                             {CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                           </select>
                         </div>
+                        {editState.category !== 'fruit' && editState.category !== 'vegetable' && (
+                          <input type="text" placeholder="品牌名称" value={editState.brandName || ''} onChange={e => setEditState(s => ({ ...s, brandName: e.target.value }))} style={inputStyle} />
+                        )}
                         <select value={editState.riskLevel} onChange={e => setEditState(s => ({ ...s, riskLevel: e.target.value }))} style={inputStyle}>
                           {RISK_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
@@ -504,7 +509,32 @@ export default function LibraryPage() {
 
                     {/* 营养成分编辑 */}
                     <div>
-                      <span style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 700 }}>营养成分 (每 100g/ml)</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <span style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 700 }}>营养成分 (每)</span>
+                        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                          <input
+                            type="number"
+                            value={editState.nutrition.serving_size ?? 100}
+                            onChange={(e) => updateEditNutrition('serving_size', e.target.value)}
+                            style={{ ...inputStyle, width: '80px', textAlign: 'center' }}
+                          />
+                          <select
+                            value={editState.nutrition.serving_unit ?? 'g'}
+                            onChange={(e) => setEditState(prev => ({
+                              ...prev,
+                              nutrition: { ...prev.nutrition, serving_unit: e.target.value }
+                            }))}
+                            style={{ ...inputStyle, width: '60px' }}
+                          >
+                            <option value="g">g</option>
+                            <option value="ml">ml</option>
+                            <option value="杯">杯</option>
+                            <option value="个">个</option>
+                            <option value="片">片</option>
+                            <option value="袋">袋</option>
+                          </select>
+                        </div>
+                      </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.4rem', marginTop: '0.5rem' }}>
                         {[
                           { label: '能量(kJ)', field: 'energy_kj' },
@@ -528,7 +558,7 @@ export default function LibraryPage() {
                     </div>
 
                     {/* 配料编辑 - 仅零食类显示 */}
-                    {(editState.category === 'snack' || editState.category === 'other') && (
+                    {editState.category !== 'fruit' && editState.category !== 'vegetable' && (
                       <div>
                         <span style={{ fontSize: '0.85rem', color: COLORS.text, fontWeight: 700 }}>配料清单</span>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
