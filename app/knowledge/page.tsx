@@ -108,47 +108,97 @@ const DIETARY_GUIDELINES = [
   },
 ];
 
-const ANTI_INFLAMMATORY_KNOWLEDGE = [
+const ANTI_INFLAMMATORY_CATEGORIES = [
   {
-    title: '促炎食物 (应减少摄入)',
+    id: 'pro-inflammatory',
+    title: '促炎食物（应减少摄入）',
     icon: '🔥',
+    color: '#e74c3c',
+    bgColor: '#fdecea',
+    description: '长期大量摄入促炎食物会导致慢性低度炎症，增加心血管疾病、糖尿病等慢性病风险。',
     items: [
-      { name: '超加工食品', desc: '含高量添加糖、精制碳水和反式脂肪（如甜点、薯片）。' },
-      { name: '精制碳水', desc: '白米、白面等，会导致血糖快速升高，诱发炎症。' },
-      { name: '红肉及加工肉类', desc: '如香肠、培根。富含饱和脂肪，过多摄入会刺激炎症。' },
-      { name: '部分植物油', desc: '富含 Omega-6 的油类（如玉米油、大豆油）过量摄入。' },
+      { name: '超加工食品', desc: '薯片、方便面、甜点等。含高量添加糖、精制碳水和反式脂肪，会激活 NF-κB 炎症通路。', tag: '高促炎' },
+      { name: '含糖饮料', desc: '碳酸饮料、奶茶、果汁饮料。高果糖摄入促进尿酸生成，加剧炎症反应。', tag: '高促炎' },
+      { name: '精制碳水', desc: '白米饭、白面包、白面条。高升糖指数食物导致血糖快速飙升，刺激炎性因子释放。', tag: '中促炎' },
+      { name: '红肉及加工肉类', desc: '猪牛羊肉、香肠、培根、火腿。富含饱和脂肪和亚硝酸盐，IARC 1类致癌物。', tag: '高促炎' },
+      { name: '反式脂肪食品', desc: '人造黄油、植脂末、起酥油。人工反式脂肪会显著升高 IL-6 和 CRP 等炎症标志物。', tag: '极高促炎' },
+      { name: '高 Omega-6 油脂', desc: '玉米油、大豆油、葵花籽油。Omega-6 过量时转化为促炎性花生四烯酸。', tag: '中促炎' },
     ]
   },
   {
-    title: '抗炎食物 (建议多吃)',
+    id: 'anti-inflammatory',
+    title: '抗炎食物（建议多吃）',
     icon: '🛡️',
+    color: '#16a085',
+    bgColor: '#e8f8f5',
+    description: '抗炎食物富含多酚、Omega-3 等活性成分，能降低体内炎症标志物水平。',
     items: [
-      { name: '深海鱼类', desc: '富含 Omega-3 的三文鱼、鲭鱼。' },
-      { name: '浆果类', desc: '蓝莓、草莓等富含花青素。' },
-      { name: '十字花科蔬菜', desc: '西兰花、羽衣甘蓝，富含异硫氰酸盐。' },
-      { name: '香辛料', desc: '姜黄（姜黄素）、生姜、大蒜。' },
-      { name: '绿茶', desc: '富含茶多酚（EGCG）。' },
+      { name: '深海鱼类', desc: '三文鱼、鲭鱼、沙丁鱼、鳕鱼。富含 EPA 和 DHA，能直接抑制促炎因子 TNF-α 和 IL-1β。', tag: '强抗炎' },
+      { name: '浆果类', desc: '蓝莓、草莓、蔓越莓、黑莓。花青素含量极高，天然的抗氧化和抗炎利器。', tag: '强抗炎' },
+      { name: '十字花科蔬菜', desc: '西兰花、羽衣甘蓝、花椰菜、卷心菜。富含萝卜硫素，激活 Nrf2 抗炎通路。', tag: '强抗炎' },
+      { name: '深色叶菜', desc: '菠菜、芥蓝、小白菜。富含叶酸、维生素 K 和类黄酮，支持抗炎代谢。', tag: '中抗炎' },
+      { name: '姜黄与香辛料', desc: '姜黄（姜黄素）、生姜（姜辣素）、大蒜（大蒜素）。姜黄素与黑胡椒同食吸收率提高 2000%。', tag: '强抗炎' },
+      { name: '坚果与种子', desc: '核桃、杏仁、亚麻籽、奇亚籽。核桃富含 ALA 型 Omega-3，亚麻籽是植物性 Omega-3 之王。', tag: '中抗炎' },
+      { name: '发酵食物', desc: '酸奶、纳豆、味噌、开菲尔。益生菌改善肠道菌群，70% 的免疫细胞位于肠道。', tag: '中抗炎' },
+      { name: '健康油脂', desc: '特级初榨橄榄油、牛油果油。橄榄油中的 Oleocanthal 具有类似布洛芬的抗炎效果。', tag: '强抗炎' },
+      { name: '绿茶与白茶', desc: '富含 EGCG（表没食子儿茶素没食子酸酯），强效抗氧化和抗炎多酚。', tag: '中抗炎' },
+      { name: '全谷物', desc: '燕麦、藜麦、糙米、荞麦。膳食纤维被肠道菌群发酵产生短链脂肪酸（SCFA），具有抗炎作用。', tag: '中抗炎' },
     ]
   },
   {
-    title: '抗炎饮食原则',
-    icon: '📜',
+    id: 'nutrients',
+    title: '关键抗炎营养素',
+    icon: '🧬',
+    color: '#d4a017',
+    bgColor: '#fef9e7',
+    description: '了解核心抗炎营养素及其作用机制，帮助有针对性地选择食物。',
     items: [
-      { name: '彩虹原则', desc: '每天摄入 5 种以上颜色的果蔬，获取不同抗氧化剂。' },
-      { name: '全谷物替代', desc: '用糙米、燕麦、藜麦代替精制米面。' },
-      { name: '优质油脂', desc: '优先选择橄榄油、牛油果、坚果。' },
+      { name: 'Omega-3 脂肪酸', desc: '包括 EPA、DHA（鱼油）和 ALA（植物源）。每周至少吃 2 次深海鱼，或每日补充 2g 鱼油。', tag: '核心' },
+      { name: '多酚类化合物', desc: '花青素（浆果）、白藜芦醇（葡萄皮）、EGCG（绿茶）、槲皮素（洋葱）。颜色越深含量越高。', tag: '核心' },
+      { name: '姜黄素', desc: '姜黄的主要活性成分。脂溶性，需搭配油脂和黑胡椒（胡椒碱）食用以提高生物利用度。', tag: '重要' },
+      { name: '维生素 D', desc: '调节免疫系统，抑制促炎因子。来源：日晒、三文鱼、蛋黄、强化食品。大部分人缺乏。', tag: '重要' },
+      { name: '膳食纤维', desc: '可溶性纤维（燕麦 β-葡聚糖）和不可溶性纤维。每日建议 25-30g，目前国人平均仅约 10g。', tag: '核心' },
+      { name: '类胡萝卜素', desc: 'β-胡萝卜素（胡萝卜）、番茄红素（番茄）、叶黄素（菠菜）。脂溶性，烹饪后吸收更好。', tag: '辅助' },
     ]
-  }
+  },
+  {
+    id: 'principles',
+    title: '抗炎饮食原则',
+    icon: '📋',
+    color: '#8e44ad',
+    bgColor: '#f5eef8',
+    description: '将抗炎理念融入日常饮食的实用指南。',
+    items: [
+      { name: '彩虹饮食法', desc: '每天摄入至少 5 种不同颜色的蔬果，确保获取多种抗氧化剂和植物化学物。红黄绿紫白各有功效。', tag: '基础' },
+      { name: 'Omega-3/6 平衡', desc: '理想比例 1:1~1:4，现代饮食普遍达到 1:15 甚至 1:25。减少植物油，增加鱼类和亚麻籽。', tag: '关键' },
+      { name: '地中海饮食模式', desc: '以蔬果、全谷物、豆类、鱼类、橄榄油为主。研究证实可降低 CRP 等炎症标志物 30-40%。', tag: '推荐' },
+      { name: '控制添加糖', desc: 'WHO 建议每日添加糖不超过 25g（约 6 茶匙）。高糖饮食是慢性炎症的重要驱动因素之一。', tag: '基础' },
+      { name: '重视肠道健康', desc: '70% 免疫细胞在肠道。多吃发酵食物和膳食纤维，避免不必要的抗生素，培养健康菌群。', tag: '关键' },
+      { name: '选择低加工食物', desc: '优先天然、完整食物（whole food），减少加工环节就是减少促炎成分。配料表成分越少越好。', tag: '基础' },
+      { name: '合理烹饪方式', desc: '优先蒸煮炖，减少油炸烧烤。高温烹饪产生 AGEs（糖基化终末产物），直接促进炎症。', tag: '实用' },
+    ]
+  },
 ];
 
 export default function KnowledgePage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'iarc' | 'dietary' | 'anti'>('iarc');
+
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set());
+  const toggleSection = (id: string) => {
+    setOpenSections(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const filteredLevels = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return IARC_LEVELS;
-    return IARC_LEVELS.filter(item => 
+    return IARC_LEVELS.filter(item =>
       item.title.toLowerCase().includes(query) ||
       item.description.toLowerCase().includes(query) ||
       item.examples.toLowerCase().includes(query) ||
@@ -156,9 +206,56 @@ export default function KnowledgePage() {
     );
   }, [searchQuery]);
 
+  const filteredGuidelines = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return DIETARY_GUIDELINES;
+    return DIETARY_GUIDELINES.filter(item =>
+      item.category.toLowerCase().includes(query) ||
+      item.description.toLowerCase().includes(query) ||
+      item.tips.toLowerCase().includes(query) ||
+      item.amount.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+
+  const filteredAntiInflammatory = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return ANTI_INFLAMMATORY_CATEGORIES;
+    return ANTI_INFLAMMATORY_CATEGORIES.map(cat => ({
+      ...cat,
+      items: cat.items.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.desc.toLowerCase().includes(query) ||
+        item.tag.toLowerCase().includes(query)
+      )
+    })).filter(cat =>
+      cat.items.length > 0 ||
+      cat.title.toLowerCase().includes(query) ||
+      cat.description.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+
+  const isSectionOpen = (id: string) => {
+    if (searchQuery.trim()) {
+      return filteredAntiInflammatory.some(cat => cat.id === id);
+    }
+    return openSections.has(id);
+  };
+
+  const TABS = [
+    { key: 'iarc' as const, label: 'IARC 分级', accent: COLORS.red },
+    { key: 'dietary' as const, label: '膳食指南', accent: COLORS.green },
+    { key: 'anti' as const, label: '抗炎饮食', accent: '#16a085' },
+  ];
+
+  const searchPlaceholder = activeTab === 'iarc'
+    ? '搜索关键词（如：代糖、培根、辐射...）'
+    : activeTab === 'dietary'
+    ? '搜索食物类别（如：蔬菜、水果...）'
+    : '搜索关键词（如：姜黄、Omega-3...）';
+
   return (
     <main style={{ width: '100%', maxWidth: '800px', margin: '0 auto', padding: '1.5rem 2rem', fontFamily: 'system-ui, sans-serif', color: COLORS.text }}>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0.5rem 0' }}>
@@ -191,151 +288,309 @@ export default function KnowledgePage() {
         </div>
       </motion.div>
 
-      <section style={{ marginBottom: '3rem' }}>
-        <motion.h2 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          style={{ fontSize: '1.2rem', borderLeft: `4px solid ${COLORS.green}`, paddingLeft: '0.75rem', marginBottom: '1.5rem' }}>
-          IARC 致癌物分级详解
-        </motion.h2>
-        
-        {/* 搜索框 */}
-        <div style={{ marginBottom: '2rem', position: 'relative' }}>
-          <input
-            type="text"
-            placeholder="搜索关键词（如：代糖、培根、辐射...）"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+      {/* Tab 栏 */}
+      <div style={{ display: 'flex', marginBottom: '1.25rem', borderBottom: `2px solid ${COLORS.greenLight}` }}>
+        {TABS.map(tab => (
+          <motion.button
+            key={tab.key}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => { setActiveTab(tab.key); setSearchQuery(''); }}
             style={{
-              width: '100%',
-              padding: '0.7rem 1rem',
-              paddingLeft: '2.5rem',
-              borderRadius: '10px',
-              border: `1px solid ${COLORS.greenLight}`,
+              flex: 1,
+              padding: '0.7rem 0.5rem',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === tab.key ? `3px solid ${tab.accent}` : '3px solid transparent',
+              color: activeTab === tab.key ? COLORS.text : COLORS.textLight,
+              fontWeight: activeTab === tab.key ? 700 : 500,
               fontSize: '0.9rem',
-              outline: 'none',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-              boxSizing: 'border-box'
+              cursor: 'pointer',
+              transition: 'color 0.2s',
+              marginBottom: '-2px',
             }}
-          />
-          <span style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
-          {searchQuery && (
-            <button 
-              onClick={() => setSearchQuery('')}
-              style={{
-                position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', color: COLORS.textLight, cursor: 'pointer', fontSize: '1.1rem'
-              }}
-            >
-              ×
-            </button>
-          )}
-        </div>
+          >
+            {tab.label}
+          </motion.button>
+        ))}
+      </div>
 
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          style={{ fontSize: '0.95rem', lineHeight: 1.6, color: COLORS.textLight, marginBottom: '1.5rem' }}>
-          国际癌症研究机构（IARC）将物质的致癌风险分为四个主要等级。<strong style={{ color: COLORS.text }}>请注意：分级是基于“证据的确定性”，而不是“毒性的强弱”。</strong> 
-          科学界公认的一条原则是：<strong style={{ color: COLORS.text }}>“脱离剂量谈毒性是不科学的。”</strong>
-        </motion.p>
+      {/* 搜索框 */}
+      <div style={{ marginBottom: '1.25rem', position: 'relative' }}>
+        <input
+          type="text"
+          placeholder={searchPlaceholder}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '0.7rem 1rem',
+            paddingLeft: '2.5rem',
+            borderRadius: '10px',
+            border: `1px solid ${COLORS.greenLight}`,
+            fontSize: '0.9rem',
+            outline: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box'
+          }}
+        />
+        <span style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            style={{
+              position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', color: COLORS.textLight, cursor: 'pointer', fontSize: '1.1rem'
+            }}
+          >
+            ×
+          </button>
+        )}
+      </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <AnimatePresence mode="popLayout">
-            {filteredLevels.length > 0 ? (
-              filteredLevels.map((item, idx) => (
-                <motion.div 
-                  key={item.level}
+      {/* IARC 分级 */}
+      {activeTab === 'iarc' && (
+        <motion.section
+          key="iarc"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ marginBottom: '2rem' }}
+        >
+          <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: COLORS.textLight, marginBottom: '1.25rem', marginTop: 0 }}>
+            国际癌症研究机构（IARC）将物质的致癌风险分为四个主要等级。<strong style={{ color: COLORS.text }}>请注意：分级是基于"证据的确定性"，而不是"毒性的强弱"。</strong>{' '}
+            科学界公认的一条原则是：<strong style={{ color: COLORS.text }}>"脱离剂量谈毒性是不科学的。"</strong>
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <AnimatePresence mode="popLayout">
+              {filteredLevels.length > 0 ? (
+                filteredLevels.map((item) => (
+                  <motion.div
+                    key={item.level}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    whileHover={{ scale: 1.01, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                    style={{
+                      padding: '1.25rem',
+                      borderRadius: '12px',
+                      background: item.bgColor,
+                      border: `1px solid ${item.color}33`,
+                      cursor: 'default',
+                    }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                      <span style={{
+                        background: item.color, color: '#fff', padding: '0.2rem 0.6rem',
+                        borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600,
+                      }}>{item.level}</span>
+                      <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{item.title}</span>
+                    </div>
+                    <p style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: COLORS.text }}>{item.description}</p>
+                    <p style={{ fontSize: '0.85rem', margin: '0 0 0.5rem', color: COLORS.textLight }}>
+                      <strong>常见例子：</strong> {item.examples}
+                    </p>
+                    <div style={{
+                      marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.6)',
+                      borderRadius: '6px', fontSize: '0.85rem', color: item.color, fontWeight: 500,
+                    }}>
+                      💡 专家建议：{item.advice}
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={{ textAlign: 'center', color: COLORS.textLight, padding: '2rem' }}
+                >
+                  未找到相关知识内容
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.section>
+      )}
+
+      {/* 膳食指南 */}
+      {activeTab === 'dietary' && (
+        <motion.section
+          key="dietary"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ marginBottom: '2rem' }}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+            <AnimatePresence mode="popLayout">
+              {filteredGuidelines.length > 0 ? (
+                filteredGuidelines.map((item, idx) => (
+                  <motion.div
+                    key={item.key}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: idx * 0.03 }}
+                    style={{
+                      padding: '1.25rem',
+                      borderRadius: '12px',
+                      background: '#fff',
+                      border: `1px solid ${COLORS.greenLight}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '1.5rem' }}>{item.icon}</span>
+                      <span style={{ fontSize: '1rem', fontWeight: 700, color: COLORS.greenDark }}>{item.amount}</span>
+                    </div>
+                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>{item.category}</h3>
+                    <p style={{ fontSize: '0.85rem', color: COLORS.text, margin: 0, lineHeight: 1.5 }}>{item.description}</p>
+                    <div style={{
+                      marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: COLORS.bg,
+                      borderRadius: '6px', fontSize: '0.8rem', color: COLORS.textLight,
+                      fontStyle: 'italic'
+                    }}>
+                      💡 {item.tips}
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={{ textAlign: 'center', color: COLORS.textLight, padding: '2rem', gridColumn: '1 / -1' }}
+                >
+                  未找到相关膳食内容
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.section>
+      )}
+
+      {/* 抗炎饮食 */}
+      {activeTab === 'anti' && (
+        <motion.section
+          key="anti"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ marginBottom: '2rem' }}
+        >
+          <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: COLORS.textLight, marginBottom: '1.25rem', marginTop: 0 }}>
+            慢性低度炎症是众多现代疾病的共同根源。通过饮食调节炎症水平，是最经济、最日常的健康干预方式。
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {filteredAntiInflammatory.map((cat) => {
+              const open = isSectionOpen(cat.id);
+              return (
+                <motion.div
+                  key={cat.id}
                   layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  whileHover={{ scale: 1.01, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   style={{
-                    padding: '1.25rem',
                     borderRadius: '12px',
-                    background: item.bgColor,
-                    border: `1px solid ${item.color}33`,
-                    cursor: 'default',
-                  }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <span style={{
-                      background: item.color, color: '#fff', padding: '0.2rem 0.6rem',
-                      borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600,
-                    }}>{item.level}</span>
-                    <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{item.title}</span>
-                  </div>
-                  <p style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: COLORS.text }}>{item.description}</p>
-                  <p style={{ fontSize: '0.85rem', margin: '0 0 0.5rem', color: COLORS.textLight }}>
-                    <strong>常见例子：</strong> {item.examples}
-                  </p>
-                  <div style={{
-                    marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.6)',
-                    borderRadius: '6px', fontSize: '0.85rem', color: item.color, fontWeight: 500,
-                  }}>
-                    💡 专家建议：{item.advice}
-                  </div>
+                    border: `1px solid ${cat.color}33`,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <motion.button
+                    onClick={() => toggleSection(cat.id)}
+                    whileHover={{ backgroundColor: cat.bgColor }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '1rem 1.25rem',
+                      background: open ? cat.bgColor : '#fff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background 0.2s',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{cat.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: COLORS.text }}>{cat.title}</div>
+                      <div style={{ fontSize: '0.8rem', color: COLORS.textLight, marginTop: '0.15rem' }}>{cat.description}</div>
+                    </div>
+                    <motion.span
+                      animate={{ rotate: open ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                      style={{ fontSize: '1rem', color: cat.color, flexShrink: 0, fontWeight: 700 }}
+                    >
+                      ▼
+                    </motion.span>
+                  </motion.button>
+
+                  <AnimatePresence initial={false}>
+                    {open && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div style={{ padding: '0.5rem 1.25rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {cat.items.map((item) => (
+                            <div
+                              key={item.name}
+                              style={{
+                                display: 'flex',
+                                gap: '0.75rem',
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                background: cat.bgColor,
+                                alignItems: 'flex-start',
+                              }}
+                            >
+                              <span style={{
+                                flexShrink: 0,
+                                padding: '0.15rem 0.4rem',
+                                borderRadius: '4px',
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                color: '#fff',
+                                background: cat.color,
+                                whiteSpace: 'nowrap',
+                                marginTop: '0.1rem',
+                              }}>
+                                {item.tag}
+                              </span>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: COLORS.text }}>{item.name}</div>
+                                <div style={{ fontSize: '0.82rem', color: COLORS.textLight, lineHeight: 1.5, marginTop: '0.2rem' }}>{item.desc}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
-              ))
-            ) : (
-              <motion.p 
+              );
+            })}
+
+            {searchQuery.trim() && filteredAntiInflammatory.length === 0 && (
+              <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                style={{ textAlign: 'center', color: COLORS.textLight, padding: '2rem' }}
+                style={{ textAlign: 'center', color: COLORS.textLight, padding: '1rem' }}
               >
-                未找到相关知识内容
+                未找到相关抗炎饮食内容
               </motion.p>
             )}
-          </AnimatePresence>
-        </div>
-      </section>
-
-      <section style={{ marginBottom: '3rem' }}>
-        <motion.h2 
-          initial={{ opacity: 0, x: -20 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          style={{ fontSize: '1.2rem', borderLeft: `4px solid ${COLORS.green}`, paddingLeft: '0.75rem', marginBottom: '1.5rem' }}>
-          《中国居民膳食指南 2022》推荐
-        </motion.h2>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
-          {DIETARY_GUIDELINES.map((item, idx) => (
-            <motion.div
-              key={item.key}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.05 }}
-              style={{
-                padding: '1.25rem',
-                borderRadius: '12px',
-                background: '#fff',
-                border: `1px solid ${COLORS.greenLight}`,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '1.5rem' }}>{item.icon}</span>
-                <span style={{ fontSize: '1rem', fontWeight: 700, color: COLORS.greenDark }}>{item.amount}</span>
-              </div>
-              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>{item.category}</h3>
-              <p style={{ fontSize: '0.85rem', color: COLORS.text, margin: 0, lineHeight: 1.5 }}>{item.description}</p>
-              <div style={{
-                marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: COLORS.bg,
-                borderRadius: '6px', fontSize: '0.8rem', color: COLORS.textLight,
-                fontStyle: 'italic'
-              }}>
-                💡 {item.tips}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+          </div>
+        </motion.section>
+      )}
 
       <motion.section 
         initial={{ opacity: 0 }}
