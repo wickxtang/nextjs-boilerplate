@@ -43,6 +43,7 @@ interface Snack {
   imageData: string | null;
   recordTime: string;
   username: string;
+  isPrivate: boolean;
   ingredients: string[];
   nutrition: {
     energy_kj: number | null;
@@ -64,6 +65,7 @@ interface EditState {
   imageData: string | null;
   imageChanged: boolean;
   brandName: string | null;
+  isPrivate: boolean;
   nutrition: {
     serving_unit: string | null;
     serving_size: number | null;
@@ -92,15 +94,16 @@ export default function LibraryPage() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [editState, setEditState] = useState<EditState>({ 
-    name: '', 
+  const [editState, setEditState] = useState<EditState>({
+    name: '',
     category: 'snack',
-    riskLevel: 'blue', 
-    ingredients: [], 
-    newIngredient: '', 
-    imageData: null, 
+    riskLevel: 'blue',
+    ingredients: [],
+    newIngredient: '',
+    imageData: null,
     imageChanged: false,
     brandName: null,
+    isPrivate: false,
     nutrition: {
       serving_unit: null,
       serving_size: null,
@@ -258,15 +261,16 @@ export default function LibraryPage() {
 
   const startEdit = (snack: Snack) => {
     setEditingId(snack.id);
-    setEditState({ 
-      name: snack.name, 
+    setEditState({
+      name: snack.name,
       category: snack.category || 'snack',
-      riskLevel: snack.riskLevel, 
-      ingredients: [...snack.ingredients], 
-      newIngredient: '', 
+      riskLevel: snack.riskLevel,
+      ingredients: [...snack.ingredients],
+      newIngredient: '',
       brandName: snack.brandName,
-      imageData: snack.imageData, 
+      imageData: snack.imageData,
       imageChanged: false,
+      isPrivate: snack.isPrivate || false,
       nutrition: {
         serving_unit: snack.nutrition.serving_unit ?? null,
         serving_size: snack.nutrition.serving_size ?? null,
@@ -319,6 +323,7 @@ export default function LibraryPage() {
       riskLevel: editState.riskLevel,
       riskLabel,
       nutrition: editState.nutrition,
+      isPrivate: editState.isPrivate,
     };
     if (editState.imageChanged) payload.imageData = editState.imageData;
     const res = await fetch(`/api/snacks/${editingId}`, {
@@ -334,9 +339,10 @@ export default function LibraryPage() {
             name: editState.name.trim(),
             brandName: editState.brandName || '',
             category: editState.category,
-            riskLevel: editState.riskLevel, 
-            riskLabel, 
-            ingredients: editState.ingredients, 
+            riskLevel: editState.riskLevel,
+            riskLabel,
+            ingredients: editState.ingredients,
+            isPrivate: editState.isPrivate,
             nutrition: {
               energy_kj: editState.nutrition.energy_kj ?? null,
               protein_g: editState.nutrition.protein_g ?? null,
@@ -504,6 +510,14 @@ export default function LibraryPage() {
                         <select value={editState.riskLevel} onChange={e => setEditState(s => ({ ...s, riskLevel: e.target.value }))} style={inputStyle}>
                           {RISK_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: COLORS.text, cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={editState.isPrivate}
+                            onChange={e => setEditState(s => ({ ...s, isPrivate: e.target.checked }))}
+                          />
+                          私有（不对他人展示）
+                        </label>
                       </div>
                     </div>
 
@@ -630,11 +644,14 @@ export default function LibraryPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div style={{ minWidth: 0, flex: 1 }}>
-                          <span 
+                          <span
                             title={snack.name}
                             style={{ fontWeight: 700, fontSize: '1.05rem', color: COLORS.text, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                           >
                             {snack.name}
+                            {snack.isPrivate && (
+                              <span style={{ fontSize: '0.7rem', marginLeft: '0.3rem', opacity: 0.6 }} title="私有食物">🔒</span>
+                            )}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
                             <span style={{ 

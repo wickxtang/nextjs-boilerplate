@@ -77,7 +77,8 @@ async function ensureInit(): Promise<void> {
         { name: 'record_time', type: 'TEXT' },
         { name: 'brand_name', type: 'TEXT' },
         { name: 'serving_size', type: 'REAL DEFAULT 100' },
-        { name: 'serving_unit', type: "TEXT DEFAULT 'g'" }
+        { name: 'serving_unit', type: "TEXT DEFAULT 'g'" },
+        { name: 'is_private', type: 'INTEGER DEFAULT 0' }
       ];
 
       for (const col of snackColumnsToAdd) {

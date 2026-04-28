@@ -32,6 +32,24 @@ interface Checkin {
   calories: number | null;
 }
 
+interface MealFoodItem {
+  name: string;
+  category: string;
+  estimated_amount: number;
+  estimated_calories: number;
+  energy_kj?: number;
+}
+
+interface MealRecord {
+  id: number;
+  mealType: string;
+  imageData: string | null;
+  foodItems: MealFoodItem[];
+  totalCalories: number | null;
+  mealDate: string;
+  createdAt: string;
+}
+
 const DIETARY_TARGETS: Record<string, { label: string; min: number; max: number; unit: string; color: string }> = {
   grain: { label: '谷薯类', min: 250, max: 400, unit: 'g', color: '#8e44ad' },
   vegetable: { label: '蔬菜类', min: 300, max: 500, unit: 'g', color: '#27ae60' },
@@ -55,9 +73,154 @@ export default function StatsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [retroAmount, setRetroAmount] = useState<string>('100');
 
+  // 三餐记录相关状态
+  const [meals, setMeals] = useState<MealRecord[]>([]);
+  const [mealUploading, setMealUploading] = useState<string | null>(null);
+  const [mealRecognizing, setMealRecognizing] = useState<string | null>(null);
+  const [recognizedFoods, setRecognizedFoods] = useState<{ mealType: string; foods: MealFoodItem[]; totalCalories: number; imageData: string } | null>(null);
+  const [mealPreviewImage, setMealPreviewImage] = useState<string | null>(null);
+  const [addToLibraryItem, setAddToLibraryItem] = useState<MealFoodItem | null>(null);
+  const [addToLibraryName, setAddToLibraryName] = useState('');
+  const [addToLibraryCategory, setAddToLibraryCategory] = useState('other');
+  const [addToLibraryCalories, setAddToLibraryCalories] = useState('');
+  const [addingToLibrary, setAddingToLibrary] = useState(false);
+
   const fetchCheckins = async () => {
     const res = await fetch('/api/checkins');
     if (res.ok) setCheckins(await res.json());
+  };
+
+  const fetchMeals = async () => {
+    const res = await fetch('/api/meals');
+    if (res.ok) setMeals(await res.json());
+  };
+
+  const MEAL_TYPES = [
+    { key: 'breakfast', label: '早餐' },
+    { key: 'lunch', label: '午餐' },
+    { key: 'dinner', label: '晚餐' },
+  ];
+
+  const CATEGORY_OPTIONS = [
+    { value: 'grain', label: '谷薯类' },
+    { value: 'vegetable', label: '蔬菜类' },
+    { value: 'fruit', label: '水果类' },
+    { value: 'meat_egg', label: '畜禽肉蛋' },
+    { value: 'aquatic', label: '水产品' },
+    { value: 'dairy', label: '奶及制品' },
+    { value: 'soy_nut', label: '大豆坚果' },
+    { value: 'snack', label: '零食' },
+    { value: 'drink', label: '饮料' },
+    { value: 'other', label: '其他' },
+  ];
+
+  const handleMealPhoto = async (mealType: string, file: File) => {
+    setMealUploading(mealType);
+
+    const reader = new FileReader();
+    reader.onload = () => {};
+    const imageBase64 = await new Promise<string>((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.readAsDataURL(file);
+    });
+
+    setMealRecognizing(mealType);
+    setMealUploading(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await fetch('/api/meals/recognize', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.success) {
+        setRecognizedFoods({
+          mealType,
+          foods: data.food_items,
+          totalCalories: data.total_calories,
+          imageData: imageBase64,
+        });
+      } else {
+        alert(data.error || '识别失败');
+      }
+    } catch {
+      alert('网络错误，请重试');
+    } finally {
+      setMealRecognizing(null);
+    }
+  };
+
+  const saveMealRecord = async () => {
+    if (!recognizedFoods) return;
+    const dateStr = selectedDate.toLocaleDateString('en-CA');
+    try {
+      const res = await fetch('/api/meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mealType: recognizedFoods.mealType,
+          mealDate: dateStr,
+          imageData: recognizedFoods.imageData,
+          foodItems: recognizedFoods.foods,
+          totalCalories: recognizedFoods.totalCalories,
+        }),
+      });
+      if (res.ok) {
+        await fetchMeals();
+        setRecognizedFoods(null);
+      } else {
+        alert('保存失败');
+      }
+    } catch {
+      alert('网络错误');
+    }
+  };
+
+  const deleteMealRecord = async (id: number) => {
+    if (!confirm('确定要删除这条三餐记录吗？')) return;
+    try {
+      const res = await fetch(`/api/meals?id=${id}`, { method: 'DELETE' });
+      if (res.ok) await fetchMeals();
+      else alert('删除失败');
+    } catch {
+      alert('网络错误');
+    }
+  };
+
+  const handleAddToLibrary = async () => {
+    if (!addToLibraryItem) return;
+    setAddingToLibrary(true);
+    try {
+      const caloriesKcal = parseFloat(addToLibraryCalories) || addToLibraryItem.estimated_calories;
+      const energyKj = caloriesKcal * 4.184;
+      const res = await fetch('/api/save-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: addToLibraryName,
+          category: addToLibraryCategory,
+          ingredients: [],
+          isPrivate: true,
+          nutrition: {
+            energy_kj: Math.round(energyKj * 10) / 10,
+            serving_size: 100,
+            serving_unit: 'g',
+          },
+        }),
+      });
+      if (res.ok) {
+        setAddToLibraryItem(null);
+        alert('已添加到私人食物库');
+      } else {
+        alert('添加失败');
+      }
+    } catch {
+      alert('网络错误');
+    } finally {
+      setAddingToLibrary(false);
+    }
   };
 
   useEffect(() => {
@@ -69,6 +232,7 @@ export default function StatsPage() {
     });
 
     fetchCheckins().then(() => setLoading(false));
+    fetchMeals();
 
     // 获取所有零食供补录选择
     fetch('/api/snacks?scope=all')
@@ -133,6 +297,11 @@ export default function StatsPage() {
     const dateStr = selectedDate.toLocaleDateString('en-CA');
     return checkins.filter(c => c.date === dateStr);
   }, [selectedDate, checkins]);
+
+  const dayMeals = useMemo(() => {
+    const dateStr = selectedDate.toLocaleDateString('en-CA');
+    return meals.filter(m => m.mealDate === dateStr);
+  }, [selectedDate, meals]);
 
   // 计算每日膳食摄入达标情况
   const dietaryProgress = useMemo(() => {
@@ -590,7 +759,330 @@ export default function StatsPage() {
               </ul>
             ) : <p style={{ fontSize: '0.85rem', color: COLORS.textLight, margin: 0 }}>当天没有记录</p>}
           </div>
+
+          {/* 三餐拍照记录 */}
+          <div style={{ padding: '1.25rem', background: '#fff', borderRadius: '16px', border: `1px solid ${COLORS.greenLight}` }}>
+            <h3 style={{ fontSize: '1rem', margin: '0 0 1rem', color: COLORS.greenDark, fontWeight: 700 }}>
+              {selectedDate.toLocaleDateString()} 三餐记录
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+              {MEAL_TYPES.map(({ key, label }) => {
+                const existingMeal = dayMeals.find(m => m.mealType === key);
+                const isUploading = mealUploading === key;
+                const isRecognizing = mealRecognizing === key;
+
+                return (
+                  <div key={key} style={{
+                    border: `1px solid ${existingMeal ? COLORS.green : COLORS.greenLight}`,
+                    borderRadius: '12px',
+                    padding: '0.75rem',
+                    textAlign: 'center',
+                    background: existingMeal ? COLORS.greenLight : '#fafafa',
+                    position: 'relative',
+                  }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: COLORS.greenDark, marginBottom: '0.5rem' }}>
+                      {label}
+                    </div>
+
+                    {existingMeal ? (
+                      <>
+                        {existingMeal.imageData && (
+                          <img
+                            src={existingMeal.imageData}
+                            alt={label}
+                            onClick={() => setMealPreviewImage(existingMeal.imageData)}
+                            style={{
+                              width: '100%',
+                              height: '80px',
+                              objectFit: 'cover',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              marginBottom: '0.4rem',
+                            }}
+                          />
+                        )}
+                        <div style={{ fontSize: '0.7rem', color: COLORS.textLight, textAlign: 'left' }}>
+                          {existingMeal.foodItems.map((f: MealFoodItem, i: number) => (
+                            <div key={i}>{f.name} ~{Math.round(f.estimated_calories)}kcal</div>
+                          ))}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: COLORS.greenDark, marginTop: '0.3rem' }}>
+                          {Math.round(existingMeal.totalCalories || 0)} kcal
+                        </div>
+                        <button
+                          onClick={() => deleteMealRecord(existingMeal.id)}
+                          style={{
+                            position: 'absolute', top: '4px', right: '6px',
+                            background: 'none', border: 'none', color: '#ccc',
+                            cursor: 'pointer', fontSize: '0.7rem',
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.color = COLORS.red)}
+                          onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
+                        >
+                          x
+                        </button>
+                      </>
+                    ) : (
+                      <label style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        justifyContent: 'center', height: '80px',
+                        border: `2px dashed ${COLORS.greenLight}`, borderRadius: '8px',
+                        cursor: (isUploading || isRecognizing) ? 'wait' : 'pointer',
+                        color: COLORS.textLight, fontSize: '0.8rem',
+                      }}>
+                        {isRecognizing ? (
+                          <span>AI 识别中...</span>
+                        ) : isUploading ? (
+                          <span>上传中...</span>
+                        ) : (
+                          <>
+                            <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>+</span>
+                            <span>拍照</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleMealPhoto(key, file);
+                            e.target.value = '';
+                          }}
+                          disabled={isUploading || isRecognizing}
+                        />
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </section>
+
+      {/* AI 识别结果弹窗 */}
+      <AnimatePresence>
+        {recognizedFoods && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            onClick={() => setRecognizedFoods(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#fff', borderRadius: '16px', padding: '1.5rem',
+                maxWidth: '450px', width: '90%', maxHeight: '80vh', overflow: 'auto',
+              }}
+            >
+              <h3 style={{ margin: '0 0 1rem', color: COLORS.greenDark }}>
+                {MEAL_TYPES.find(m => m.key === recognizedFoods.mealType)?.label} - AI 识别结果
+              </h3>
+
+              {recognizedFoods.imageData && (
+                <img
+                  src={recognizedFoods.imageData}
+                  alt="餐食照片"
+                  style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px', marginBottom: '1rem' }}
+                />
+              )}
+
+              <div style={{ marginBottom: '1rem' }}>
+                {recognizedFoods.foods.map((food, i) => (
+                  <div key={i} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '0.5rem 0', borderBottom: `1px solid ${COLORS.greenLight}`,
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{food.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: COLORS.textLight }}>
+                        ~{food.estimated_amount}g / {Math.round(food.estimated_calories)} kcal
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setAddToLibraryItem(food);
+                        setAddToLibraryName(food.name);
+                        setAddToLibraryCategory(food.category || 'other');
+                        setAddToLibraryCalories(String(Math.round(food.estimated_calories)));
+                      }}
+                      style={{
+                        background: COLORS.blueLight, border: `1px solid ${COLORS.blue}`,
+                        borderRadius: '6px', padding: '0.2rem 0.5rem', fontSize: '0.7rem',
+                        color: COLORS.blue, cursor: 'pointer', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      + 食物库
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: COLORS.greenDark, textAlign: 'center', marginBottom: '1rem' }}>
+                总热量: {Math.round(recognizedFoods.totalCalories)} kcal
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setRecognizedFoods(null)}
+                  style={{
+                    flex: 1, padding: '0.6rem', borderRadius: '8px',
+                    border: `1px solid ${COLORS.greenLight}`, background: '#fff',
+                    cursor: 'pointer', fontSize: '0.9rem',
+                  }}
+                >
+                  取消
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={saveMealRecord}
+                  style={{
+                    flex: 1, padding: '0.6rem', borderRadius: '8px',
+                    border: 'none', background: COLORS.green, color: '#fff',
+                    cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
+                  }}
+                >
+                  确认保存
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 添加到食物库弹窗 */}
+      <AnimatePresence>
+        {addToLibraryItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.5)', zIndex: 1100,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            onClick={() => setAddToLibraryItem(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#fff', borderRadius: '16px', padding: '1.5rem',
+                maxWidth: '350px', width: '90%',
+              }}
+            >
+              <h3 style={{ margin: '0 0 1rem', color: COLORS.greenDark }}>添加到私人食物库</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: COLORS.textLight }}>名称</label>
+                  <input
+                    value={addToLibraryName}
+                    onChange={e => setAddToLibraryName(e.target.value)}
+                    style={{
+                      width: '100%', padding: '0.4rem 0.6rem', borderRadius: '6px',
+                      border: `1px solid ${COLORS.greenLight}`, fontSize: '0.85rem',
+                      outline: 'none', boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: COLORS.textLight }}>分类</label>
+                  <select
+                    value={addToLibraryCategory}
+                    onChange={e => setAddToLibraryCategory(e.target.value)}
+                    style={{
+                      width: '100%', padding: '0.4rem', borderRadius: '6px',
+                      border: `1px solid ${COLORS.greenLight}`, fontSize: '0.85rem', outline: 'none',
+                    }}
+                  >
+                    {CATEGORY_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: COLORS.textLight }}>热量 (kcal/100g)</label>
+                  <input
+                    type="number"
+                    value={addToLibraryCalories}
+                    onChange={e => setAddToLibraryCalories(e.target.value)}
+                    style={{
+                      width: '100%', padding: '0.4rem 0.6rem', borderRadius: '6px',
+                      border: `1px solid ${COLORS.greenLight}`, fontSize: '0.85rem',
+                      outline: 'none', boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button
+                    onClick={() => setAddToLibraryItem(null)}
+                    style={{
+                      flex: 1, padding: '0.5rem', borderRadius: '8px',
+                      border: `1px solid ${COLORS.greenLight}`, background: '#fff',
+                      cursor: 'pointer', fontSize: '0.85rem',
+                    }}
+                  >
+                    取消
+                  </button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={addingToLibrary || !addToLibraryName}
+                    onClick={handleAddToLibrary}
+                    style={{
+                      flex: 1, padding: '0.5rem', borderRadius: '8px',
+                      border: 'none', background: COLORS.green, color: '#fff',
+                      cursor: addingToLibrary ? 'wait' : 'pointer',
+                      fontSize: '0.85rem', fontWeight: 600,
+                      opacity: addingToLibrary ? 0.6 : 1,
+                    }}
+                  >
+                    {addingToLibrary ? '添加中...' : '添加'}
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 图片预览弹窗 */}
+      <AnimatePresence>
+        {mealPreviewImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setMealPreviewImage(null)}
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.8)', zIndex: 1000,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <img
+              src={mealPreviewImage}
+              alt="预览"
+              style={{ maxWidth: '90%', maxHeight: '90vh', borderRadius: '8px' }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
       </div>
     </main>
   );

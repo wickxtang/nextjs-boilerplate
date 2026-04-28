@@ -81,7 +81,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     riskLevel,
     riskLabel,
     imageData,
-    nutrition
+    nutrition,
+    isPrivate
   } = body;
 
   if (!name || !Array.isArray(ingredients)) {
@@ -102,7 +103,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     'carbohydrate_g = ?',
     'sodium_mg = ?',
     'serving_size = ?',
-    'serving_unit = ?'
+    'serving_unit = ?',
   ];
   const args: InValue[] = [
     name,
@@ -118,6 +119,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     nutrition?.serving_size ?? 100,
     nutrition?.serving_unit ?? 'g',
   ];
+
+  if (isPrivate !== undefined) {
+    updateFields.push('is_private = ?');
+    args.push(isPrivate ? 1 : 0);
+  }
 
   if (imageData !== undefined) {
     updateFields.push('image_data = ?');

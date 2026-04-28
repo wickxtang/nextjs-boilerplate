@@ -9,16 +9,17 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { 
-    name, 
+  const {
+    name,
     brandName,
     category,
-    ingredients, 
-    riskLevel, 
-    riskLabel, 
-    interpretation, 
+    ingredients,
+    riskLevel,
+    riskLabel,
+    interpretation,
     imageData,
-    nutrition 
+    nutrition,
+    isPrivate
   } = body;
 
   if (!name || !Array.isArray(ingredients)) {
@@ -27,17 +28,17 @@ export async function POST(request: NextRequest) {
 
   const snackResult = await execute(
     `INSERT INTO snacks (
-      user_id, name, brand_name, category, risk_level, risk_label, interpretation, image_data, 
-      energy_kj, protein_g, fat_g, carbohydrate_g, sodium_mg, serving_size, serving_unit, record_time
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, date('now'))`,
+      user_id, name, brand_name, category, risk_level, risk_label, interpretation, image_data,
+      energy_kj, protein_g, fat_g, carbohydrate_g, sodium_mg, serving_size, serving_unit, is_private, record_time
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, date('now'))`,
     [
-      user.userId, 
-      name, 
+      user.userId,
+      name,
       brandName || null,
       category || 'snack',
-      riskLevel || null, 
-      riskLabel || null, 
-      interpretation || null, 
+      riskLevel || null,
+      riskLabel || null,
+      interpretation || null,
       imageData || null,
       nutrition?.energy_kj || null,
       nutrition?.protein_g || null,
@@ -45,7 +46,8 @@ export async function POST(request: NextRequest) {
       nutrition?.carbohydrate_g || null,
       nutrition?.sodium_mg || null,
       nutrition?.serving_size || 100,
-      nutrition?.serving_unit || 'g'
+      nutrition?.serving_unit || 'g',
+      isPrivate ? 1 : 0
     ]
   );
   const snackId = Number(snackResult.lastInsertRowid);

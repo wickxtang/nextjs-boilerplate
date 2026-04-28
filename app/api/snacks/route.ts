@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
 
   const query = scope === 'mine'
     ? `SELECT s.*, u.username FROM snacks s JOIN users u ON s.user_id = u.id WHERE s.user_id = ? ORDER BY s.created_at DESC`
-    : `SELECT s.*, u.username FROM snacks s JOIN users u ON s.user_id = u.id ORDER BY s.created_at DESC`;
+    : `SELECT s.*, u.username FROM snacks s JOIN users u ON s.user_id = u.id WHERE (s.is_private = 0 OR s.is_private IS NULL OR s.user_id = ?) ORDER BY s.created_at DESC`;
 
-  const params = scope === 'mine' ? [user.userId] : [];
+  const params = [user.userId];
   const snacks = await queryAll<{
     id: number;
     user_id: number;
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
     brand_name: string | null;
     serving_size: number | null;
     serving_unit: string | null;
+    is_private: number | null;
     record_time: string;
     created_at: string;
     username: string;
@@ -75,6 +76,7 @@ export async function GET(request: NextRequest) {
     recordTime: s.record_time,
     createdAt: s.created_at,
     username: s.username,
+    isPrivate: s.is_private === 1,
     ingredients: ingredientsMap[s.id] || [],
   }));
 
