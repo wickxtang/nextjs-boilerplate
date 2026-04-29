@@ -173,8 +173,8 @@ export default function ReportPage() {
     ctx.fillStyle = COLORS.textLight;
     ctx.fillText('风险评分（越低越好）', width / 2, 170);
 
-    // 评分下方草黄色装饰线
-    ctx.fillStyle = '#e8d5a3';
+    // 评分下方装饰线
+    ctx.fillStyle = '#e0e0e0';
     ctx.fillRect(width / 2 - 40, 180, 80, 2);
 
     ctx.textAlign = 'left';
@@ -226,7 +226,7 @@ export default function ReportPage() {
     ctx.font = 'bold 18px system-ui';
     ctx.fillText('风险警示', padding + 16, currentY + 28);
     // 标题下划线
-    ctx.fillStyle = '#e8d5a3';
+    ctx.fillStyle = '#e0e0e0';
     ctx.fillRect(padding + 16, currentY + 36, 24, 2);
     currentY += 50;
 
@@ -303,7 +303,7 @@ export default function ReportPage() {
     // 底部 - 固定在画布底部
     const footerY = totalHeight - 50;
     // 装饰线
-    ctx.fillStyle = '#e8d5a3';
+    ctx.fillStyle = '#e0e0e0';
     ctx.fillRect(width / 2 - 30, footerY - 10, 60, 2);
     ctx.fillStyle = COLORS.text;
     ctx.font = 'bold 16px system-ui';
