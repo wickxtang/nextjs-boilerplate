@@ -120,20 +120,20 @@ export default function ReportPage() {
     const width = 750;
     const padding = 40;
 
-    // 先预计算总高度
+    // 先预计算总高度（与实际绘制逻辑一致）
     let totalHeight = 200; // 头部
-    totalHeight += 140; // 打卡成就区
-    totalHeight += 30; // 风险警示标题
+    totalHeight += 160; // 打卡成就区 (currentY += 160)
+    totalHeight += 50; // 风险警示标题 (currentY += 50)
     if (insights.profile.topRiskIngredients.length > 0) {
-      totalHeight += 30; // 高风险配料标题
+      totalHeight += 28; // 高风险配料标题 (currentY += 28)
       totalHeight += Math.min(insights.profile.topRiskIngredients.length, 5) * 38;
     }
-    totalHeight += 16;
+    totalHeight += 16; // 间距
     if (insights.warnings.length > 0) {
-      totalHeight += 30; // 预警标题
+      totalHeight += 28; // 预警标题 (currentY += 28)
       totalHeight += Math.min(insights.warnings.length, 3) * 44;
     }
-    totalHeight += 80; // 底部
+    totalHeight += 60; // 底部
 
     // 设置画布尺寸（一次性设置好）
     canvas.width = width;
@@ -147,11 +147,9 @@ export default function ReportPage() {
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, width, 200);
 
-    // 顶部装饰条 - 绿色 + 草黄色双色
+    // 顶部装饰条 - 绿色
     ctx.fillStyle = COLORS.green;
     ctx.fillRect(0, 0, width, 4);
-    ctx.fillStyle = '#e8d5a3';
-    ctx.fillRect(0, 4, width, 3);
 
     // 左侧绿色竖条装饰
     ctx.fillStyle = COLORS.green;
@@ -239,9 +237,6 @@ export default function ReportPage() {
     ctx.fillStyle = COLORS.text;
     ctx.font = 'bold 18px system-ui';
     ctx.fillText('风险警示', padding + 16, currentY + 28);
-    // 草黄色小装饰
-    ctx.fillStyle = '#e8d5a3';
-    ctx.fillRect(padding + 16, currentY + 36, 24, 2);
     currentY += 50;
 
     // 高风险配料 Top5
@@ -309,23 +304,20 @@ export default function ReportPage() {
         const text = warning.message.length > maxChars
           ? warning.message.substring(0, maxChars) + '...'
           : warning.message;
-        ctx.fillText(text, warnPadding + 28, currentY + 24);
+        ctx.fillText(text, padding + 28, currentY + 24);
         currentY += 44;
       });
     }
 
     // 底部
     currentY += 30;
-    // 草黄色装饰线
-    ctx.fillStyle = '#e8d5a3';
-    ctx.fillRect(width / 2 - 30, currentY - 10, 60, 2);
-    ctx.fillStyle = COLORS.text;
-    ctx.font = 'bold 16px system-ui';
+    ctx.fillStyle = COLORS.greenDark;
+    ctx.font = 'bold 18px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('食物健康助手', width / 2, currentY + 10);
+    ctx.fillText('食物健康助手', width / 2, currentY);
     ctx.fillStyle = COLORS.textLight;
     ctx.font = '12px system-ui';
-    ctx.fillText('关注配料健康，从记录开始', width / 2, currentY + 30);
+    ctx.fillText('关注配料健康，从记录开始', width / 2, currentY + 25);
     ctx.textAlign = 'left';
 
     setGenerating(false);
