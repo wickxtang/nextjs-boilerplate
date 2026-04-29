@@ -8,7 +8,14 @@
       "Bash(npx -y better-sqlite3)",
       "Bash(node -e \"const Database = require\\('better-sqlite3'\\); const db = new Database\\('data/app.db'\\); console.log\\(db.prepare\\('SELECT * FROM snacks'\\).all\\(\\)\\); console.log\\(db.prepare\\('SELECT * FROM snack_ingredients'\\).all\\(\\)\\);\")",
       "Bash(npm uninstall *)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Read(//c/Users/wickx/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/**)",
+      "Bash(bash scripts/start-server.sh --project-dir \"D:\\\\projects\\\\nextjs-boilerplate\")",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(npx tsc *)",
+      "Bash(chmod u+w *)",
+      "Bash(npx eslint *)"
     ]
   }
 }

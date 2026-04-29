@@ -299,25 +299,26 @@ async function generateAIInterpretation(data: {
   try {
     const model = genAI.getGenerativeModel({
       model: "gemini-flash-latest",
-      generationConfig: { responseMimeType: "text" },
+      generationConfig: { responseMimeType: "text/plain" },
     });
 
     const prompt = `你是一个专业的健康饮食顾问。请根据以下用户的食品摄入数据，生成一份简洁的个性化健康洞察报告。
 
-用户数据：
-1. 预警信息：${JSON.stringify(data.warnings, null, 2)}
-2. 成分趋势：${JSON.stringify(data.trends.currentMonth?.slice(0, 5), null, 2)}
-3. 风险画像：风险评分 ${data.profile.riskScore}/100，高风险成分 ${data.profile.topRiskIngredients?.length || 0} 种
+                    用户数据：
+                    1. 预警信息：${JSON.stringify(data.warnings, null, 2)}
+                    2. 成分趋势：${JSON.stringify(data.trends.currentMonth?.slice(0, 5), null, 2)}
+                    3. 风险画像：风险评分 ${data.profile.riskScore}/100，高风险成分 ${data.profile.topRiskIngredients?.length || 0} 种
 
-要求：
-- 使用中文
-- 语气友好、专业
-- 重点突出最需要关注的问题
-- 给出具体可行的建议
-- 控制在200字以内
-- 不要使用 Markdown 格式`;
+                    要求：
+                    - 使用中文
+                    - 语气友好、专业
+                    - 重点突出最需要关注的问题
+                    - 给出具体可行的建议
+                    - 控制在200字以内
+                    - 不要使用 Markdown 格式`;
 
     const result = await model.generateContent(prompt);
+    console.info('AI 解读生成:', result);
     return result.response.text() || '暂无 AI 解读';
   } catch (error) {
     console.error('AI 解读生成失败:', error);
@@ -346,14 +347,14 @@ export async function GET(request: NextRequest) {
       LIMIT 1
     `, [user.userId]);
 
-    if (cache) {
-      return NextResponse.json({
-        success: true,
-        cached: true,
-        computedAt: cache.computed_at,
-        ...JSON.parse(cache.content),
-      });
-    }
+    // if (cache) {
+    //   return NextResponse.json({
+    //     success: true,
+    //     cached: true,
+    //     computedAt: cache.computed_at,
+    //     ...JSON.parse(cache.content),
+    //   });
+    // }
 
     // 生成新数据
     const [warnings, trends, profile] = await Promise.all([
