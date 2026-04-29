@@ -85,7 +85,7 @@ export async function GET() {
           riskLevel: risk.riskLevel,
           totalCount: row.total_count,
           relatedSnacksCount: row.snack_count,
-          trend: change > 10 ? 'up' : change < -10 ? 'down' : 'stable',
+          trend: (change > 10 ? 'up' : change < -10 ? 'down' : 'stable') as 'up' | 'down' | 'stable',
         };
       })
       .slice(0, 20);
