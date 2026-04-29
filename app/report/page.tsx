@@ -133,7 +133,7 @@ export default function ReportPage() {
       totalHeight += 28; // 预警标题 (currentY += 28)
       totalHeight += Math.min(insights.warnings.length, 3) * 44;
     }
-    totalHeight += 60; // 底部
+    totalHeight += 70; // 底部
 
     // 设置画布尺寸（一次性设置好）
     canvas.width = width;
@@ -198,45 +198,36 @@ export default function ReportPage() {
 
     achievements.forEach((item, i) => {
       const x = padding + (width - padding * 2) / 3 * i + (width - padding * 2) / 6;
-      // 数值 + 单位放在一行，用小号单位
+      // 数值居中显示
       ctx.textAlign = 'center';
       ctx.fillStyle = COLORS.text;
-      ctx.font = 'bold 28px system-ui';
-      const valueWidth = ctx.measureText(item.value).width;
-      ctx.font = '14px system-ui';
-      const unitWidth = ctx.measureText(item.unit).width;
-      const totalWidth = valueWidth + unitWidth + 4;
-      const startX = x - totalWidth / 2;
-      // 绘制数值
-      ctx.font = 'bold 28px system-ui';
-      ctx.fillStyle = COLORS.text;
-      ctx.textAlign = 'left';
-      ctx.fillText(item.value, startX, currentY + 50);
-      // 绘制单位（与数值底部对齐）
-      ctx.font = '14px system-ui';
+      ctx.font = 'bold 32px system-ui';
+      ctx.fillText(item.value, x, currentY + 48);
+      // 单位单独一行，小字显示在数值下方
+      ctx.font = '12px system-ui';
       ctx.fillStyle = COLORS.textLight;
-      ctx.fillText(item.unit, startX + valueWidth + 4, currentY + 50);
-      // 绘制标签
-      ctx.textAlign = 'center';
+      ctx.fillText(item.unit, x, currentY + 66);
+      // 标签
       ctx.font = '13px system-ui';
       ctx.fillStyle = COLORS.textLight;
-      ctx.fillText(item.label, x, currentY + 78);
+      ctx.fillText(item.label, x, currentY + 90);
     });
 
     ctx.textAlign = 'left';
     currentY += 160;
 
     // 风险警示区 - 白色卡片
-    const warningCardY = currentY;
+    const warningCardHeight = totalHeight - currentY - 60;
     ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.roundRect(padding, warningCardY, width - padding * 2, totalHeight - currentY - 80, 8);
-    ctx.fill();
+    ctx.fillRect(padding, currentY, width - padding * 2, warningCardHeight);
 
     // 风险警示区标题
     ctx.fillStyle = COLORS.text;
     ctx.font = 'bold 18px system-ui';
     ctx.fillText('风险警示', padding + 16, currentY + 28);
+    // 标题下划线
+    ctx.fillStyle = '#e8d5a3';
+    ctx.fillRect(padding + 16, currentY + 36, 24, 2);
     currentY += 50;
 
     // 高风险配料 Top5
@@ -309,15 +300,18 @@ export default function ReportPage() {
       });
     }
 
-    // 底部
-    currentY += 30;
-    ctx.fillStyle = COLORS.greenDark;
-    ctx.font = 'bold 18px system-ui';
+    // 底部 - 固定在画布底部
+    const footerY = totalHeight - 50;
+    // 装饰线
+    ctx.fillStyle = '#e8d5a3';
+    ctx.fillRect(width / 2 - 30, footerY - 10, 60, 2);
+    ctx.fillStyle = COLORS.text;
+    ctx.font = 'bold 16px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('食物健康助手', width / 2, currentY);
+    ctx.fillText('食物健康助手', width / 2, footerY + 10);
     ctx.fillStyle = COLORS.textLight;
     ctx.font = '12px system-ui';
-    ctx.fillText('关注配料健康，从记录开始', width / 2, currentY + 25);
+    ctx.fillText('关注配料健康，从记录开始', width / 2, footerY + 28);
     ctx.textAlign = 'left';
 
     setGenerating(false);
