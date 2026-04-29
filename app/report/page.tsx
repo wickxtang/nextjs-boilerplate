@@ -125,13 +125,13 @@ export default function ReportPage() {
     totalHeight += 140; // 打卡成就区
     totalHeight += 30; // 风险警示标题
     if (insights.profile.topRiskIngredients.length > 0) {
-      totalHeight += 25; // 高风险配料标题
-      totalHeight += Math.min(insights.profile.topRiskIngredients.length, 5) * 30;
+      totalHeight += 30; // 高风险配料标题
+      totalHeight += Math.min(insights.profile.topRiskIngredients.length, 5) * 38;
     }
-    totalHeight += 10;
+    totalHeight += 16;
     if (insights.warnings.length > 0) {
-      totalHeight += 25; // 预警标题
-      totalHeight += Math.min(insights.warnings.length, 3) * 25;
+      totalHeight += 30; // 预警标题
+      totalHeight += Math.min(insights.warnings.length, 3) * 44;
     }
     totalHeight += 80; // 底部
 
@@ -143,28 +143,30 @@ export default function ReportPage() {
     ctx.fillStyle = COLORS.bg;
     ctx.fillRect(0, 0, width, canvas.height);
 
-    // 头部背景
+    // 头部背景 - 使用柔和的深色渐变
     const headerGradient = ctx.createLinearGradient(0, 0, width, 200);
-    headerGradient.addColorStop(0, COLORS.green);
-    headerGradient.addColorStop(1, COLORS.greenDark);
+    headerGradient.addColorStop(0, '#2d3a2a');
+    headerGradient.addColorStop(1, '#1a2418');
     ctx.fillStyle = headerGradient;
     ctx.fillRect(0, 0, width, 200);
 
     // 用户名和日期
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 28px system-ui';
-    ctx.fillText(username, padding, 50);
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.font = '16px system-ui';
-    ctx.fillText(new Date().toLocaleDateString('zh-CN'), padding, 80);
+    ctx.fillText(new Date().toLocaleDateString('zh-CN'), padding, 40);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 24px system-ui';
+    ctx.fillText(username + ' 的健康报告', padding, 72);
 
-    // 风险评分
+    // 风险评分 - 居中大字
     const score = insights.profile.riskScore;
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 72px system-ui';
+    ctx.font = 'bold 80px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText(score.toString(), width / 2, 140);
-    ctx.font = '18px system-ui';
-    ctx.fillText('风险评分', width / 2, 170);
+    ctx.fillText(score.toString(), width / 2, 155);
+    ctx.font = '14px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText('风险评分（越低越好）', width / 2, 180);
     ctx.textAlign = 'left';
 
     let currentY = 220;
@@ -183,14 +185,29 @@ export default function ReportPage() {
 
     achievements.forEach((item, i) => {
       const x = padding + (width - padding * 2) / 3 * i + (width - padding * 2) / 6;
-      ctx.fillStyle = COLORS.greenDark;
-      ctx.font = 'bold 32px system-ui';
+      // 数值 + 单位放在一行，用小号单位
       ctx.textAlign = 'center';
-      ctx.fillText(item.value, x, currentY + 50);
-      ctx.fillStyle = COLORS.textLight;
+      ctx.fillStyle = COLORS.text;
+      ctx.font = 'bold 28px system-ui';
+      const valueWidth = ctx.measureText(item.value).width;
       ctx.font = '14px system-ui';
-      ctx.fillText(item.unit, x + ctx.measureText(item.value).width / 2 + 5, currentY + 50);
-      ctx.fillText(item.label, x, currentY + 80);
+      const unitWidth = ctx.measureText(item.unit).width;
+      const totalWidth = valueWidth + unitWidth + 4;
+      const startX = x - totalWidth / 2;
+      // 绘制数值
+      ctx.font = 'bold 28px system-ui';
+      ctx.fillStyle = COLORS.text;
+      ctx.textAlign = 'left';
+      ctx.fillText(item.value, startX, currentY + 50);
+      // 绘制单位（与数值底部对齐）
+      ctx.font = '14px system-ui';
+      ctx.fillStyle = COLORS.textLight;
+      ctx.fillText(item.unit, startX + valueWidth + 4, currentY + 50);
+      // 绘制标签
+      ctx.textAlign = 'center';
+      ctx.font = '13px system-ui';
+      ctx.fillStyle = COLORS.textLight;
+      ctx.fillText(item.label, x, currentY + 78);
     });
 
     ctx.textAlign = 'left';
@@ -205,42 +222,68 @@ export default function ReportPage() {
     // 高风险配料 Top5
     if (insights.profile.topRiskIngredients.length > 0) {
       ctx.fillStyle = COLORS.textLight;
-      ctx.font = '14px system-ui';
+      ctx.font = '13px system-ui';
       ctx.fillText('高风险配料 Top5', padding, currentY);
-      currentY += 25;
+      currentY += 30;
 
       insights.profile.topRiskIngredients.slice(0, 5).forEach((item, i) => {
         const riskColor = item.riskLevel === 'red' ? COLORS.red : COLORS.yellow;
+        // 风险色块
         ctx.fillStyle = riskColor;
-        ctx.fillRect(padding, currentY, 4, 20);
+        ctx.beginPath();
+        ctx.roundRect(padding, currentY, 24, 24, 4);
+        ctx.fill();
+        // 排名数字
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText((i + 1).toString(), padding + 12, currentY + 17);
+        ctx.textAlign = 'left';
+        // 配料名称
         ctx.fillStyle = COLORS.text;
-        ctx.font = '16px system-ui';
-        ctx.fillText(`${i + 1}. ${item.name}`, padding + 15, currentY + 16);
+        ctx.font = '15px system-ui';
+        ctx.fillText(item.name, padding + 34, currentY + 17);
+        // 出现次数
         ctx.fillStyle = COLORS.textLight;
-        ctx.font = '14px system-ui';
-        ctx.fillText(`${item.count}次`, width - padding - 50, currentY + 16);
-        currentY += 30;
+        ctx.font = '13px system-ui';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${item.count}次`, width - padding, currentY + 17);
+        ctx.textAlign = 'left';
+        currentY += 38;
       });
     }
 
-    currentY += 10;
+    currentY += 16;
 
     // 预警信息
     if (insights.warnings.length > 0) {
       ctx.fillStyle = COLORS.textLight;
-      ctx.font = '14px system-ui';
+      ctx.font = '13px system-ui';
       ctx.fillText('最近预警', padding, currentY);
-      currentY += 25;
+      currentY += 30;
 
       insights.warnings.slice(0, 3).forEach((warning) => {
+        // 预警背景
+        ctx.fillStyle = '#fef2f2';
+        ctx.beginPath();
+        ctx.roundRect(padding, currentY, width - padding * 2, 36, 6);
+        ctx.fill();
+        ctx.strokeStyle = '#fecaca';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // 预警图标
         ctx.fillStyle = COLORS.red;
         ctx.font = '14px system-ui';
-        const maxChars = 35;
+        ctx.fillText('!', padding + 12, currentY + 24);
+        // 预警文字
+        ctx.fillStyle = COLORS.text;
+        ctx.font = '13px system-ui';
+        const maxChars = 38;
         const text = warning.message.length > maxChars
           ? warning.message.substring(0, maxChars) + '...'
           : warning.message;
-        ctx.fillText(text, padding, currentY + 16);
-        currentY += 25;
+        ctx.fillText(text, padding + 28, currentY + 24);
+        currentY += 44;
       });
     }
 
