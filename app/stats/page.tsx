@@ -85,6 +85,55 @@ export default function StatsPage() {
   const [addToLibraryCalories, setAddToLibraryCalories] = useState('');
   const [addingToLibrary, setAddingToLibrary] = useState(false);
 
+  // 健康洞察相关状态
+  const [healthInsights, setHealthInsights] = useState<{
+    warnings: Array<{
+      ingredient: string;
+      iarcLevel: string;
+      riskLevel: string;
+      consecutiveDays: number;
+      totalCount: number;
+      relatedSnacks: string[];
+      message: string;
+    }>;
+    trends: {
+      currentMonth: Array<{
+        ingredient: string;
+        currentCount: number;
+        lastCount: number;
+        change: number;
+        iarcLevel: string;
+        riskLevel: string;
+        trend: string;
+      }>;
+      summary: {
+        totalIngredientsCurrent: number;
+        totalIngredientsLast: number;
+      };
+    };
+    profile: {
+      riskScore: number;
+      riskDistribution: {
+        red: { count: number; ingredients: string[] };
+        yellow: { count: number; ingredients: string[] };
+        blue: { count: number; ingredients: string[] };
+      };
+      topRiskIngredients: Array<{
+        name: string;
+        count: number;
+        iarcLevel: string;
+        riskLevel: string;
+      }>;
+      totalCheckins: number;
+      uniqueIngredients: number;
+    };
+    aiInterpretation: string;
+    computedAt: string;
+    cached: boolean;
+  } | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
+
   const fetchCheckins = async () => {
     const res = await fetch('/api/checkins');
     if (res.ok) setCheckins(await res.json());
@@ -93,6 +142,21 @@ export default function StatsPage() {
   const fetchMeals = async () => {
     const res = await fetch('/api/meals');
     if (res.ok) setMeals(await res.json());
+  };
+
+  const fetchHealthInsights = async () => {
+    setInsightsLoading(true);
+    try {
+      const res = await fetch('/api/health-insights');
+      if (res.ok) {
+        const data = await res.json();
+        setHealthInsights(data);
+      }
+    } catch (err) {
+      console.error('获取健康洞察失败:', err);
+    } finally {
+      setInsightsLoading(false);
+    }
   };
 
   const MEAL_TYPES = [
@@ -238,6 +302,9 @@ export default function StatsPage() {
     fetch('/api/snacks?scope=all')
       .then(res => res.json())
       .then(data => setAllSnacks(data));
+
+    // 获取健康洞察
+    fetchHealthInsights();
   }, [router]);
 
   const handleRetroactiveCheckin = async () => {
@@ -648,6 +715,181 @@ export default function StatsPage() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* 健康洞察模块 */}
+          <div style={{ padding: '1.5rem', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.greenLight}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ fontSize: '1.1rem', margin: 0, color: COLORS.greenDark }}>🔍 健康洞察</h2>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {healthInsights?.cached && (
+                  <span style={{ fontSize: '0.7rem', color: COLORS.textLight }}>缓存于 {new Date(healthInsights.computedAt).toLocaleString()}</span>
+                )}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={fetchHealthInsights}
+                  disabled={insightsLoading}
+                  style={{
+                    background: COLORS.greenLight,
+                    border: 'none',
+                    borderRadius: '15px',
+                    padding: '0.2rem 0.75rem',
+                    fontSize: '0.75rem',
+                    color: COLORS.greenDark,
+                    cursor: insightsLoading ? 'wait' : 'pointer',
+                    fontWeight: 600,
+                    opacity: insightsLoading ? 0.6 : 1,
+                  }}
+                >
+                  {insightsLoading ? '加载中...' : '刷新'}
+                </motion.button>
+              </div>
+            </div>
+
+            {insightsLoading && !healthInsights ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: COLORS.textLight }}>
+                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⏳</div>
+                <div>正在分析您的健康数据...</div>
+              </div>
+            ) : healthInsights ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* 预警信息 */}
+                {healthInsights.warnings.length > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: COLORS.red }}>⚠️ 摄入预警</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {healthInsights.warnings.map((warning, i) => (
+                        <div key={i} style={{
+                          padding: '0.75rem',
+                          background: warning.riskLevel === 'red' ? COLORS.redLight : COLORS.yellowLight,
+                          borderRadius: '8px',
+                          border: `1px solid ${warning.riskLevel === 'red' ? COLORS.red : COLORS.yellow}`,
+                          fontSize: '0.8rem',
+                        }}>
+                          <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{warning.message}</div>
+                          <div style={{ fontSize: '0.75rem', color: COLORS.textLight }}>
+                            相关食品：{warning.relatedSnacks.join('、')}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 风险成分 Top 3 */}
+                {healthInsights.profile.topRiskIngredients.length > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: COLORS.greenDark }}>🎯 你的风险成分 Top 3</h3>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {healthInsights.profile.topRiskIngredients.slice(0, 3).map((ingredient, i) => (
+                        <div key={i} style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          background: ingredient.riskLevel === 'red' ? COLORS.redLight : COLORS.yellowLight,
+                          borderRadius: '8px',
+                          border: `1px solid ${ingredient.riskLevel === 'red' ? COLORS.red : COLORS.yellow}`,
+                          textAlign: 'center',
+                        }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{ingredient.name}</div>
+                          <div style={{ fontSize: '0.7rem', color: COLORS.textLight, marginTop: '0.25rem' }}>
+                            {ingredient.iarcLevel}类致癌物
+                          </div>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 600, marginTop: '0.25rem' }}>
+                            摄入 {ingredient.count} 次
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 趋势分析 */}
+                {healthInsights.trends.currentMonth.length > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: COLORS.greenDark }}>📊 成分趋势（本月 vs 上月）</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      {healthInsights.trends.currentMonth.slice(0, 5).map((trend, i) => (
+                        <div key={i} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '0.5rem 0.75rem',
+                          background: '#f8f9fa',
+                          borderRadius: '6px',
+                          fontSize: '0.8rem',
+                        }}>
+                          <span style={{ fontWeight: 600 }}>{trend.ingredient}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ color: COLORS.textLight }}>
+                              {trend.lastCount} → {trend.currentCount} 次
+                            </span>
+                            <span style={{
+                              padding: '0.15rem 0.4rem',
+                              borderRadius: '10px',
+                              fontSize: '0.7rem',
+                              fontWeight: 600,
+                              background: trend.trend === 'up' ? COLORS.redLight : trend.trend === 'down' ? COLORS.greenLight : '#f0f0f0',
+                              color: trend.trend === 'up' ? COLORS.red : trend.trend === 'down' ? COLORS.greenDark : COLORS.textLight,
+                            }}>
+                              {trend.change > 0 ? '+' : ''}{trend.change}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI 解读 */}
+                {healthInsights.aiInterpretation && (
+                  <div style={{
+                    padding: '1rem',
+                    background: 'linear-gradient(135deg, #e8f5e0 0%, #f0f8e8 100%)',
+                    borderRadius: '12px',
+                    border: `1px solid ${COLORS.greenLight}`,
+                  }}>
+                    <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: COLORS.greenDark }}>🤖 AI 健康顾问</h3>
+                    <p style={{ fontSize: '0.85rem', margin: 0, lineHeight: 1.6, color: COLORS.text }}>
+                      {healthInsights.aiInterpretation}
+                    </p>
+                  </div>
+                )}
+
+                {/* 风险评分 */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-around',
+                  padding: '1rem',
+                  background: '#f8f9fa',
+                  borderRadius: '12px',
+                }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: healthInsights.profile.riskScore > 30 ? COLORS.red : healthInsights.profile.riskScore > 10 ? COLORS.yellow : COLORS.green }}>
+                      {healthInsights.profile.riskScore}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: COLORS.textLight }}>风险评分</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: COLORS.greenDark }}>
+                      {healthInsights.profile.totalCheckins}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: COLORS.textLight }}>总打卡次数</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: COLORS.blue }}>
+                      {healthInsights.profile.uniqueIngredients}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: COLORS.textLight }}>摄入配料种类</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem', color: COLORS.textLight }}>
+                <div>暂无健康洞察数据</div>
+                <div style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>多打卡几次食物后，系统会为您生成个性化健康报告</div>
+              </div>
+            )}
           </div>
         </section>
 

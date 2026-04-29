@@ -106,6 +106,32 @@ async function ensureInit(): Promise<void> {
         );
       `);
 
+      // 健康洞察缓存表
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS health_insights (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          insight_type TEXT NOT NULL, -- 'warning', 'trend', 'profile'
+          content TEXT NOT NULL, -- JSON 格式的洞察内容
+          computed_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+
+      // 配料知识库表
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS ingredient_knowledge (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          standard_name TEXT,
+          aliases TEXT, -- JSON 数组
+          iarc_level TEXT, -- '1', '2A', '2B', '3'
+          category TEXT, -- 'preservative', 'sweetener', 'colorant', etc.
+          description TEXT,
+          risk_note TEXT
+        );
+      `);
+
       // 动态升级：为 snack_ingredients 表添加数量和单位列
       const snackIngredientColumnsToAdd = [
         { name: 'quantity', type: 'REAL DEFAULT 100' },
